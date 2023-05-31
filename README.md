@@ -1,11 +1,10 @@
 # WaveFunctionCollapse with quantum wave function collapse (QWFC)
 
-![example maps](png "example maps")
+<p align="center"><img alt="example maps" src="images/example.png"></p>
 
 QWFC is an experimental implementation of the [WFC](https://github.com/mxgmn/WaveFunctionCollapse) algorithm for quantum
 computers. The original program generates images that appear similar to an input image by randomly drawing image
-elements in an iterative fashion. A short description of the algorithm can be found
-on https://github.com/mxgmn/WaveFunctionCollapse, a more in-depth description is for example
+elements in an iterative fashion. A short description of the algorithm can be found [here](https://github.com/mxgmn/WaveFunctionCollapse), a more in-depth description is for example
 presented [here](https://robertheaton.com/2018/12/17/wavefunction-collapse-algorithm.
 
 WFC is a quantum-inspired but in fact completely classical algorithm: "Unobserved" parts of an image are in a "
@@ -15,7 +14,7 @@ quantum circuit (with [Qiskit](https://qiskit.org/)) that prepares a suitable su
 which each image — or map — is composed of a set of tiles and certain rules restrict the placement of these tiles
 depending on adjacent tiles. Each tile is encoded in or or more qubits such that the prepared state is a superposition
 of all possible tile layouts. A measurement consequently reveals a random realization. QWFC is not a one-to-one
-recreation of WFC, but a simlified version that has the goal to achieve a similar end result.
+recreation of WFC, but a simplified version that has the goal to achieve a similar end result.
 
 ## Algorithm
 
@@ -51,26 +50,26 @@ tiles.
 
 Consider a very simple map consisting of three tiles (reed - green - blue):
 
-![checkerboard tiles](png "checkerboard tiles")
+<p align="center"><img alt="checkerboard tiles" src="images/checker-tiles.png"></p>
 
 The resulting circuit to produce checkerboard tiles is then:
 
-![checkerboard circuit](png "checkerboard circuit")
+<p align="center"><img alt="checkerboard circuit" src="images/checker-circuit.png"></p>
 
 Measuring this circuit reveals two tile layouts (starting with a white tile or starting with a black tile) with the same
 probability:
 
-![checkerboard layout 0](png "checkerboard layout A")
-![checkerboard layout 1](png "checkerboard layout B")
+<p align="center"><img alt="checkerboard layout A" src="images/checker-tiles-0.png"></p>
+<p align="center"><img alt="checkerboard layout B" src="images/checker-tiles-1.png"></p>
 
 That is, the circuit produces a state that represents *all* valid layout combinations in a superposition (two in this
 simple case). Its measurement *collapses* the state onto one definite layout. That's the simple idea behind QWFC.
 
 ## Hybrid algorithm
 
+<p align="center"><img alt="hybrid algorithm" src="images/hybrid.png"></p>
+
 Since current quantum hardware is very limited, a hybrid quantum-classical algorithm is also implemented in which the
 map is traversed with a sliding window. For each iteration, a circuit is generated and measured for the sliding window
 region (also taking the adjacency relations outside of the window into account). With this approach, significantly
 bigger maps can be generated.
-
-![hybrid algorithm](png "hybrid")
