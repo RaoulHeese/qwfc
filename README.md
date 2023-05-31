@@ -42,7 +42,7 @@ The resulting circuit to produce checkerboard tiles is then:
 
 <p align="center"><img alt="checkerboard circuit" src="images/checker-circuit.png"></p>
 
-Measuring this circuit reveals two tile layouts (starting with a white tile or starting with a black tile) with the same probability:
+Since every tile can only be in two states, three qubits are sufficient to represent the entire map. The colors indicate which qubits corresponds to which tile. Measuring this circuit reveals two tile layouts (starting with a white tile or starting with a black tile) with the same probability:
 
 <p align="center"><img alt="checkerboard layout A" src="images/checker-tiles-0.png"></p>
 <p align="center"><img alt="checkerboard layout B" src="images/checker-tiles-1.png"></p>
