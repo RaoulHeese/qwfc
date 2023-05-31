@@ -34,7 +34,7 @@ As a trivial example, consider a one-dimensional map with only white/black tiles
 
 For the first tile, rule 3 applies. It is therefore prepared in a superposition state with a simple Hadamard gate. For the second tile, rules 1 and 2 apply. These rules can be implemented with a controlled rotation. Similarly for subsequent tiles.
 
-A one-dimensional map with three tiles (reed - green - blue) obviously looks like this:
+A one-dimensional map with three tiles (reed, green and blue) obviously looks like this:
 
 <p align="center"><img alt="checkerboard tiles" src="images/checker-tiles.png"></p>
 
