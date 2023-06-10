@@ -233,7 +233,7 @@ class Map(MapInterface):
         [tuple, dict[Any, tuple], dict[Any, Any], int, dict[tuple, int]], CorrelationRuleSet],
                 coord_path_fun: Callable[[Iterator[tuple]], Iterator[tuple]], coord_fixed: dict[tuple, int] = None,
                 callback_fun: Callable[[Any, int, tuple], None] = None, add_barriers: bool = False,
-                use_sv: bool = False):
+                use_sv: bool = False) -> None:
         """
         Generate QQFC circuit and store it in self.qc.
 
@@ -270,8 +270,33 @@ class Map(MapInterface):
             self._qc.save_statevector()
         self._qc.measure(range(n), range(n))
 
+    def _execute_sampler(self, backend: Any, optimization_level: int, resilience_level: int) -> None:
+        """
+        Run generated QQFC circuit on a backend using the Sampler primitive and store the results in self.parsed_counts.
+        Experimental implementation.
+        """
+        from qiskit_ibm_runtime import QiskitRuntimeService, Session, Sampler, Options
+
+        sv_instructions = [idx for idx, (inst, _, _) in enumerate(m.qc.data) if inst.name == 'save_statevector']
+        qc = m.qc.copy()
+        for idx in sorted(sv_instructions, reverse=True):
+            qc.data.pop(idx)  # remove save_statevector instruction from circuit
+        #
+        service = QiskitRuntimeService()
+        options = Options()
+        options.resilience_level = resilience_level
+        options.optimization_level = optimization_level
+        #
+        with Session(service=service, backend=backend) as session:
+            sampler = Sampler(session=session, options=options)
+            result = sampler.run(qc).result()
+        #
+        probabilities_dict = result.quasi_dists[0].binary_probabilities()
+        #
+        self._parsed_counts = self._tiles.parse_counts(probabilities_dict)
+
     def execute(self, backend: Any, tp_kwarg_dict: dict[str, Any] = None, run_kwarg_dict: dict[str, Any] = None,
-                use_sv: bool = False, sv_p_cutoff: float = 1e-12):
+                use_sv: bool = False, sv_p_cutoff: float = 1e-12) -> None:
         """
         Run generated QQFC circuit on a backend and store the results in self.parsed_counts.
 
@@ -352,7 +377,7 @@ class MapSlidingWindow(MapInterface):
                 [tuple, dict[Any, tuple], dict[Any, Any], int, dict[tuple, int]], CorrelationRuleSet],
             backend: Any, tp_kwarg_dict: dict[str, Any] = None, run_kwarg_dict: dict[str, Any] = None,
             use_sv: bool = False, segment_callback_fun: Callable[[Any, int, tuple], None] = None,
-            callback_fun: Callable[[Any, int, Map, dict[tuple, int]], None] = None):
+            callback_fun: Callable[[Any, int, Map, dict[tuple, int]], None] = None) -> None:
         """
         Use a sliding window approach to generate multiple QWFC circuits and run each of them on a backend. Compose these results to obtain a tile map.
 
