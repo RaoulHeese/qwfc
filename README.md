@@ -67,6 +67,25 @@ starting with a black tile) with the same probability:
 That is, the circuit produces a state that represents *all* valid layout combinations in a superposition (two in this
 simple case). Its measurement *collapses* the state onto one definite layout. That's the simple idea behind QWFC.
 
+## Real quantum device
+
+The QWFC code can be used for quantum simulations as well as for experiments on real quantum hardware via 
+[IBMQ](https://www.ibm.com/quantum).
+Let's consider a simple example again, a two-dimensional 2 by 3 checkerboard map (as described above) that is realized
+with 6 qubits.
+A circuit of this size can for example be executed on the freely accessible hardware device *ibm_lagos* that has 7 
+qubits in total.
+Due to hardware imperfections, more than the theoretically allowed two superpositions (starting with either a black or a
+white tile) are typically measured in such an experiment.
+Here is a plot of an exemplary result:
+
+<p align="center"><img alt="quantum hardware results" src="images/hardware-sample.png"></p>
+
+Each bar in the plot represents a different state with a height according to its measured probability (sorted in 
+descending order). The little image on top shows the encoded map. Only the two green bars are theoretically allowed, all 
+red bars are theoretically forbidden.
+In the top right corner, the connectivity map of *ibm_lagos* is shown.
+
 ## Hybrid algorithm
 
 Since current quantum hardware is very limited (and computationally expensive to simulate), a hybrid quantum-classical
@@ -78,22 +97,3 @@ account. With this approach, significantly bigger maps can be generated.
 
 For example, to extend the one-dimensional checkerboard map from above, a sliding window made out of three tiles can be
 slided from left to right and bottom to top to create a bigger, two-dimensional checkerboard map.
-
-## Real quantum device
-
-This code can not only be used to run quantum computing simulations but also to perform experiments on actual quantum
-hardware.
-Let's consider a simple example again, a two-dimensional 2 by 3 checkerboard map (as described above) that is realized
-with 6 qubits.
-A circuit of this size can for example be executed on the freely accessible hardware device
-[*ibm_lagos*](https://www.ibm.com/quantum) that has 7 qubits in total.
-Due to hardware imperfections, more than the theoretically allowed two superpositions (starting with either a black or a
-white tile) are typically measured in such an experiment.
-Here is a plot of an exemplary result:
-
-<p align="center"><img alt="quantum hardware results" src="images/hardware-sample.png"></p>
-
-Each bar in the plot represents a different state with a height according to its measured probability. The little image
-on top shows the encoded map. Only the two green bars are theoretically allowed, all red bars are theoretically
-forbidden.
-In the top right corner, the connectivity map of *ibm_lagos* is shown.
