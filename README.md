@@ -71,10 +71,10 @@ simple case). Its measurement *collapses* the state onto one definite layout. Th
 
 The QWFC code can be used for quantum simulations as well as for experiments on real quantum hardware via 
 [IBMQ](https://www.ibm.com/quantum).
-Let's consider a simple example again, a two-dimensional 2 by 3 checkerboard map (as described above) that is realized
+Let's consider a simple example again, a two-dimensional 2 by 3 checkerboard map (as described above) that is realized 
 with 6 qubits.
-A circuit of this size can for example be executed on the freely accessible hardware device *ibm_lagos* that has 7 
-qubits in total.
+A circuit of this size can for example be executed on the freely accessible hardware device *ibm_lagos* (Falcon r5.11H QPU) 
+with 7 qubits in total.
 Due to hardware imperfections, more than the theoretically allowed two superpositions (starting with either a black or a
 white tile) are typically measured in such an experiment.
 Here is a plot of an exemplary result:
