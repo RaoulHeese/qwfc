@@ -277,8 +277,8 @@ class Map(MapInterface):
         """
         from qiskit_ibm_runtime import QiskitRuntimeService, Session, Sampler, Options
 
-        sv_instructions = [idx for idx, (inst, _, _) in enumerate(m.qc.data) if inst.name == 'save_statevector']
-        qc = m.qc.copy()
+        sv_instructions = [idx for idx, (inst, _, _) in enumerate(self.qc.data) if inst.name == 'save_statevector']
+        qc = self.qc.copy()
         for idx in sorted(sv_instructions, reverse=True):
             qc.data.pop(idx)  # remove save_statevector instruction from circuit
         #
