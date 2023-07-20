@@ -104,7 +104,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-m', '--map-lim', type=int, default=2, help='map size')
 parser.add_argument('--sv', dest='use_sv', action='store_true', help='use statevector simulator')
 parser.set_defaults(use_sv=False)
-parser.add_argument('-s', '--shots', type=int, default=1000, help='shots for non-statevector')
+parser.add_argument('-s', '--shots', type=int, default=1000, help='number of shots for non-statevector')
 parser.add_argument('--coord-path-seed', type=int, default=42, help='random seed')
 
 args = parser.parse_args()

@@ -248,7 +248,7 @@ parser.add_argument('--big', dest='big_flag', action='store_true', help='use big
 parser.set_defaults(big_flag=False)
 parser.add_argument('--sv', dest='use_sv', action='store_true', help='use statevector simulator (only for full map)')
 parser.set_defaults(use_sv=False)
-parser.add_argument('--shots', type=int, default=1000, help='shots for non-statevector (only for full map)')
+parser.add_argument('--shots', type=int, default=1000, help='number of shots for non-statevector (only for full map)')
 args = parser.parse_args()
 
 if __name__ == '__main__':
