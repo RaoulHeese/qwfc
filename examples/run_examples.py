@@ -1,15 +1,20 @@
 import os
+import sys
 
 
-assert os.system('cd checker && python checker.py --dim 1 --sv --qc') == 0
-assert os.system('cd checker && python checker.py --dim 2 --sv') == 0
+def run_example(sub_dir, python_file, *args):
+    assert os.system(f'cd {sub_dir} && {sys.executable} {python_file} {" ".join([str(arg) for arg in args])}') == 0
 
-assert os.system('cd lines && python lines.py') == 0
 
-assert os.system('cd platformer && python platformer.py') == 0
-assert os.system('cd platformer && python platformer.py --big') == 0
-assert os.system('cd platformer && python platformer.py -x 4 -y 4 --segment-x-size 0') == 0
+run_example('checker', 'checker.py', '--dim 1 --sv --qc')
+run_example('checker', 'checker.py', '--dim 2 --sv')
 
-assert os.system('cd hex && python hex.py') == 0
+run_example('lines', 'lines.py')
 
-assert os.system('cd poetry && python poetry.py') == 0
+run_example('platformer', 'platformer.py')
+run_example('platformer', 'platformer.py', '--big')
+run_example('platformer', 'platformer.py', '-x 4 -y 4 --segment-x-size 0')
+
+run_example('hex', 'hex.py')
+
+run_example('poetry', 'poetry.py')

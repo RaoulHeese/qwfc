@@ -7,7 +7,9 @@ from qiskit import Aer
 
 sys.path.insert(0, '../../src')
 from qwfc import Map, MapSlidingWindow, CorrelationRuleSet
-from qwfc_example_utils import coord_rules_fun_generator, compose_image
+from runner import CircuitRunnerIBMQAer
+sys.path.insert(0, '../')
+from example_utils import coord_rules_fun_generator, compose_image
 
 
 def coord_neighbors_fun(coord):
@@ -174,21 +176,22 @@ def process_output_segmented(mapped_coords, big_flag):
 
 def run_full(map_x_size, map_y_size, big_flag, use_sv, shots):
     # input
-    backend = Aer.get_backend('aer_simulator')
-    tp_kwarg_dict = dict()
-    run_kwarg_dict = dict(shots=shots)
+    if use_sv:
+        backend = Aer.get_backend('statevector_simulator')
+    else:
+        backend = Aer.get_backend('qasm_simulator')
+    circuit_runner = CircuitRunnerIBMQAer(backend=backend, run_kwarg_dict=dict(shots=shots))
     n_values, coord_rules_fun = generate_coord_rules_fun(big_flag)
     coord_list = [(x, y) for y in range(map_y_size - 1, -1, -1) for x in range(map_x_size)]
 
     # run
-    print(f'platformer: run full map generation (backend={backend.name()}, use_sv={use_sv}, shots={shots})...')
+    print(f'platformer: run full map generation (circuit_runner={circuit_runner})...')
     m = Map(n_values, coord_list, coord_neighbors_fun)
-    m.run(coord_rules_fun, segment_coord_path_fun, backend, callback_fun=None, use_sv=use_sv,
-          tp_kwarg_dict=tp_kwarg_dict, run_kwarg_dict=run_kwarg_dict)
+    m.run(coord_rules_fun, segment_coord_path_fun, circuit_runner=circuit_runner, callback_fun=None)
 
     # output
     print('finished:')
-    process_output_full(m.parsed_counts, big_flag)
+    process_output_full(m.pc, big_flag)
 
 
 def run_segmented(map_x_size, map_y_size, segment_x_size, segment_y_size, segment_x_shift, segment_y_shift, big_flag):
@@ -200,24 +203,20 @@ def run_segmented(map_x_size, map_y_size, segment_x_size, segment_y_size, segmen
         pbar.set_postfix({'idx': idx}, {'coord': coord})
 
     # input
-    backend = Aer.get_backend('aer_simulator')
-    use_sv = False
     shots = 1
-    tp_kwarg_dict = dict()
-    run_kwarg_dict = dict(shots=shots)
+    circuit_runner = CircuitRunnerIBMQAer(backend=Aer.get_backend('qasm_simulator'), run_kwarg_dict=dict(shots=shots))
     n_values, coord_rules_fun = generate_coord_rules_fun(big_flag)
     coord_list = [(x, y) for y in range(map_y_size - 1, -1, -1) for x in range(map_x_size)]
 
     # run
-    print(f'platformer: run segmented map generation (backend={backend.name()}, use_sv={use_sv}, shots={shots})...')
+    print(f'platformer: run segmented map generation (circuit_runner={circuit_runner})...')
     msw = MapSlidingWindow(n_values, coord_list, coord_neighbors_fun)
     segment_iter_fun = lambda coord_list: segment_iter_fun_wrapper(coord_list, map_x_size, map_y_size, segment_x_size,
                                                                    segment_y_size, segment_x_shift, segment_y_shift)
     total_steps = (((map_x_size - segment_x_size) // segment_x_shift) + 1) * (
             ((map_y_size - segment_y_size) // segment_y_shift) + 1)
     with tqdm(total=total_steps) as pbar:
-        msw.run(segment_map_fun, segment_iter_fun, coord_rules_fun, backend, tp_kwarg_dict=tp_kwarg_dict,
-                run_kwarg_dict=run_kwarg_dict, use_sv=use_sv,
+        msw.run(segment_map_fun, segment_iter_fun, coord_rules_fun, circuit_runner=circuit_runner,
                 segment_callback_fun=lambda m, idx, coord: segment_callback_fun(m, idx, coord, pbar),
                 callback_fun=lambda msw, idx, map_segment, segment_mapped_coords: callback_fun(msw, idx, map_segment,
                                                                                                segment_mapped_coords,

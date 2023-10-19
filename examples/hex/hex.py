@@ -8,7 +8,9 @@ from qiskit import Aer
 
 sys.path.insert(0, '../../src')
 from qwfc import Map, MapSlidingWindow, CorrelationRuleSet
-from qwfc_example_utils import coord_rules_fun_generator
+from runner import CircuitRunnerIBMQAer
+sys.path.insert(0, '../')
+from example_utils import coord_rules_fun_generator
 
 
 def coord_neighbors_fun(coord):
@@ -82,21 +84,22 @@ def run(map_lim, use_sv=True, shots=1000, coord_path_seed=42):
             rules[r] = {0: .5, 1: .5}
         # island rules
     coord_rules_fun = coord_rules_fun_generator(adj_order, rules, lambda: CorrelationRuleSet(n_values))
-    backend = Aer.get_backend('aer_simulator')
-    tp_kwarg_dict = dict()
-    run_kwarg_dict = dict(shots=shots)
+    if use_sv:
+        backend = Aer.get_backend('statevector_simulator')
+    else:
+        backend = Aer.get_backend('qasm_simulator')
+    circuit_runner = CircuitRunnerIBMQAer(backend=backend, run_kwarg_dict = dict(shots=shots))
     coord_list = [(r, s, t) for r in range(-map_lim, map_lim + 1) for s in range(-map_lim, map_lim + 1) for t in
                   range(-map_lim, map_lim + 1) if s + r + t == 0]
 
     # run
-    print(f'hex: run full map generation (backend={backend.name()}, use_sv={use_sv}, shots={shots})...')
+    print(f'hex: run full map generation (circuit_runner={circuit_runner})...')
     m = Map(n_values, coord_list, coord_neighbors_fun)
-    m.run(coord_rules_fun, lambda cl: coord_path_fun(cl, coord_path_seed), backend, callback_fun=None, use_sv=use_sv,
-          tp_kwarg_dict=tp_kwarg_dict, run_kwarg_dict=run_kwarg_dict)
+    m.run(coord_rules_fun, lambda cl: coord_path_fun(cl, coord_path_seed), circuit_runner=circuit_runner, callback_fun=None)
 
     # output
     print('finished:')
-    process_output(m.parsed_counts)
+    process_output(m.pc)
 
 
 # args

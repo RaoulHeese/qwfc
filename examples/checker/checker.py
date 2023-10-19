@@ -4,7 +4,9 @@ from qiskit import Aer
 
 sys.path.insert(0, '../../src')
 from qwfc import Map, MapSlidingWindow, CorrelationRuleSet
-from qwfc_example_utils import coord_rules_fun_generator, compose_image
+from runner import CircuitRunnerIBMQAer
+sys.path.insert(0, '../')
+from example_utils import coord_rules_fun_generator, compose_image
 
 
 def process_output(parsed_counts, qc, prefix=''):
@@ -49,19 +51,20 @@ def run_1d(map_x_size, use_sv, shots, show_qc):
              (None, 1): {0: 1},
              }
     coord_rules_fun_1d = coord_rules_fun_generator(adj_order, rules, lambda: CorrelationRuleSet(n_values))
-    backend = Aer.get_backend('aer_simulator')
-    tp_kwarg_dict = dict()
-    run_kwarg_dict = dict(shots=shots)
+    if use_sv:
+        backend = Aer.get_backend('statevector_simulator')
+    else:
+        backend = Aer.get_backend('qasm_simulator')
+    circuit_runner = CircuitRunnerIBMQAer(backend = backend, run_kwarg_dict = dict(shots=shots))
     coord_list_1d = [(x,) for x in range(map_x_size)]
 
     # run
-    print(f'checker 1d: run full map generation (backend={backend.name()}, use_sv={use_sv}, shots={shots})...')
+    print(f'checker 1d: run full map generation (circuit_runner={circuit_runner})...')
     m = Map(n_values, coord_list_1d, coord_neighbors_fun_1d)
-    m.run(coord_rules_fun_1d, coord_path_fun_1d, backend, callback_fun=None, use_sv=use_sv, tp_kwarg_dict=tp_kwarg_dict,
-          run_kwarg_dict=run_kwarg_dict)
+    m.run(coord_rules_fun_1d, coord_path_fun_1d, circuit_runner, callback_fun=None)
 
     # output
-    process_output(m.parsed_counts, m.qc if show_qc else None, '1d-')
+    process_output(m.pc, m.qc if show_qc else None, '1d-')
 
 
 def run_2d(map_x_size, map_y_size, use_sv, shots, show_qc):
@@ -91,20 +94,21 @@ def run_2d(map_x_size, map_y_size, use_sv, shots, show_qc):
              (None, None, 1, None): {0: 1},
              }
     coord_rules_fun_2d = coord_rules_fun_generator(adj_order, rules, lambda: CorrelationRuleSet(n_values))
-    backend = Aer.get_backend('aer_simulator')
-    tp_kwarg_dict = dict()
-    run_kwarg_dict = dict(shots=shots)
+    if use_sv:
+        backend = Aer.get_backend('statevector_simulator')
+    else:
+        backend = Aer.get_backend('qasm_simulator')
+    circuit_runner = CircuitRunnerIBMQAer(backend=backend, run_kwarg_dict=dict(shots=shots))
     coord_list_2d = [(x, y) for y in range(map_y_size - 1, -1, -1) for x in range(map_x_size)]
 
     # run
-    print(f'checker 2d: run full map generation (backend={backend.name()}, use_sv={use_sv}, shots={shots})...')
+    print(f'checker 2d: run full map generation (circuit_runner={circuit_runner})...')
     m = Map(n_values, coord_list_2d, coord_neighbors_fun_2d)
-    m.run(coord_rules_fun_2d, coord_path_fun_2d, backend, callback_fun=None, use_sv=use_sv, tp_kwarg_dict=tp_kwarg_dict,
-          run_kwarg_dict=run_kwarg_dict)
+    m.run(coord_rules_fun_2d, coord_path_fun_2d, circuit_runner, callback_fun=None)
 
     # output+
     print('finished:')
-    process_output(m.parsed_counts, m.qc if show_qc else None, '2d-')
+    process_output(m.pc, m.qc if show_qc else None, '2d-')
 
 
 def run(dim, max_x_size, map_y_size, use_sv, shots, show_qc):

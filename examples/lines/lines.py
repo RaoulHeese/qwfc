@@ -5,7 +5,9 @@ from qiskit import Aer
 
 sys.path.insert(0, '../../src')
 from qwfc import Map, MapSlidingWindow, CorrelationRuleSet
-from qwfc_example_utils import coord_rules_fun_generator, compose_image
+from runner import CircuitRunnerIBMQAer
+sys.path.insert(0, '../')
+from example_utils import coord_rules_fun_generator, compose_image
 
 n_values = 8
 
@@ -206,24 +208,20 @@ def run(map_x_size, map_y_size, segment_x_size, segment_y_size, segment_x_shift,
         pbar.set_postfix({'idx': idx}, {'coord': coord})
 
     # input
-    backend = Aer.get_backend('aer_simulator')
     shots = 1
-    use_sv = False
-    tp_kwarg_dict = dict()
-    run_kwarg_dict = dict(shots=shots)
+    circuit_runner = CircuitRunnerIBMQAer(backend=Aer.get_backend('qasm_simulator'), run_kwarg_dict=dict(shots=shots))
     coord_rules_fun = generate_coord_rules_fun((lambda coords: coords[0] * alpha) if alpha > 0 else 1)
     coord_list = [(x, y) for y in range(map_y_size - 1, -1, -1) for x in range(map_x_size)]
 
     # run
-    print(f'lines: run segmented map generation (backend={backend.name()}, use_sv={use_sv}, shots={shots})...')
+    print(f'lines: run segmented map generation (circuit_runner={circuit_runner})...')
     msw = MapSlidingWindow(n_values, coord_list, coord_neighbors_fun)
     segment_iter_fun = lambda coord_list: segment_iter_fun_wrapper(coord_list, map_x_size, map_y_size, segment_x_size,
                                                                    segment_y_size, segment_x_shift, segment_y_shift)
     total_steps = (((map_x_size - segment_x_size) // segment_x_shift) + 1) * (
             ((map_y_size - segment_y_size) // segment_y_shift) + 1)
     with tqdm(total=total_steps, desc='run') as pbar:
-        msw.run(segment_map_fun, segment_iter_fun, coord_rules_fun, backend, tp_kwarg_dict=tp_kwarg_dict,
-                run_kwarg_dict=run_kwarg_dict, use_sv=use_sv,
+        msw.run(segment_map_fun, segment_iter_fun, coord_rules_fun, circuit_runner=circuit_runner,
                 segment_callback_fun=lambda m, idx, coord: segment_callback_fun(m, idx, coord, pbar),
                 callback_fun=lambda msw, idx, map_segment, segment_mapped_coords: callback_fun(msw, idx, map_segment,
                                                                                                segment_mapped_coords,

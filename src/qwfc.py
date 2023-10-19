@@ -2,8 +2,9 @@ from typing import Any, Callable, Iterator, Tuple
 from abc import abstractmethod
 from itertools import product
 import numpy as np
-from qiskit import QuantumCircuit, transpile
+from qiskit import QuantumCircuit
 from qiskit.circuit.library import RYGate
+from runner import CircuitRunnerInterface
 
 
 class AlphabetUser:
@@ -211,7 +212,7 @@ class Map(MapInterface):
         self._tiles.set_qubits()
         #
         self._qc = None
-        self._parsed_counts = None
+        self._pc = None
         self._visited_coord_list = None
 
     @property
@@ -225,15 +226,15 @@ class Map(MapInterface):
         return self._qc
 
     @property
-    def parsed_counts(self):
+    def pc(self):
         """Return quantum measurement results (after calling self.execute or self.run)."""
-        return self._parsed_counts  # bitstring: (probability, mapped_coords)
+        return self._pc  # bitstring: (probability, mapped_coords)
 
     def circuit(self, coord_rules_fun: Callable[
         [tuple, dict[Any, tuple], dict[Any, Any], int, dict[tuple, int]], CorrelationRuleSet],
                 coord_path_fun: Callable[[Iterator[tuple]], Iterator[tuple]], coord_fixed: dict[tuple, int] = None,
                 callback_fun: Callable[[Any, int, tuple], None] = None, add_barriers: bool = False,
-                use_sv: bool = False) -> None:
+                add_measurement: bool = True) -> None:
         """
         Generate QQFC circuit and store it in self.qc.
 
@@ -242,13 +243,13 @@ class Map(MapInterface):
         :param coord_fixed: Coordinates with tile IDs as constraints.
         :param callback_fun: Callback function for each coordinate iteration.
         :param add_barriers: If True, add barriers to circuits between coordinate iterations.
-        :param use_sv: If True, presume statevector simulation.
+        :param add_measurement: If True, add a final measurement of all qubits.
         :return: None
         """
         if coord_fixed is None:
             coord_fixed = {}
         n = self._tiles.n_qubits
-        self._parsed_counts = None
+        self._pc = None
         self._qc = QuantumCircuit(n, n)
         #
         self._visited_coord_list = []
@@ -266,90 +267,43 @@ class Map(MapInterface):
             if callback_fun is not None:
                 callback_fun(self, idx, coord)
         #
-        if use_sv:
-            self._qc.save_statevector()
-        self._qc.measure(range(n), range(n))
+        if add_measurement:
+            self._qc.measure(range(n), range(n))
 
-    def _execute_sampler(self, backend: Any, optimization_level: int, resilience_level: int) -> None:
+    def parsed_counts(self, circuit_runner: CircuitRunnerInterface) -> None:
         """
-        Run generated QQFC circuit on a backend using the Sampler primitive and store the results in self.parsed_counts.
-        Experimental implementation.
-        """
-        from qiskit_ibm_runtime import QiskitRuntimeService, Session, Sampler, Options
+        Execute the generated QWFC circuit and store the results in self._pc.
 
-        sv_instructions = [idx for idx, (inst, _, _) in enumerate(self.qc.data) if inst.name == 'save_statevector']
-        qc = self.qc.copy()
-        for idx in sorted(sv_instructions, reverse=True):
-            qc.data.pop(idx)  # remove save_statevector instruction from circuit
-        #
-        service = QiskitRuntimeService()
-        options = Options()
-        options.resilience_level = resilience_level
-        options.optimization_level = optimization_level
-        #
-        with Session(service=service, backend=backend) as session:
-            sampler = Sampler(session=session, options=options)
-            result = sampler.run(qc).result()
-        #
-        probabilities_dict = result.quasi_dists[0].binary_probabilities()
-        #
-        self._parsed_counts = self._tiles.parse_counts(probabilities_dict)
-
-    def execute(self, backend: Any, tp_kwarg_dict: dict[str, Any] = None, run_kwarg_dict: dict[str, Any] = None,
-                use_sv: bool = False, sv_p_cutoff: float = 1e-12) -> None:
-        """
-        Run generated QQFC circuit on a backend and store the results in self.parsed_counts.
-
-        :param backend: Qiskit Backend to run the circuit on.
-        :param tp_kwarg_dict: Transpiler keyword arguments.
-        :param run_kwarg_dict: Execution keyword arguments.
-        :param use_sv: If True, presume statevector simulation.
-        :param sv_p_cutoff: Cutoff probabilities below this threshold for a statevector simulation (rounding errors).
+        :param circuit_runner: Implementation of CircuitRunnerInterface with an 'execute' method to run the circuits. Returns a list of probability dictionaries.
         :return: None
         """
-
         assert self.qc is not None
-        if tp_kwarg_dict is None:
-            tp_kwarg_dict = {}
-        if run_kwarg_dict is None:
-            run_kwarg_dict = {}
-        qc = transpile(self.qc, backend, **tp_kwarg_dict)
-        job = backend.run(qc, **run_kwarg_dict)
-        result = job.result()
-        if use_sv:
-            counts = {k: v for k, v in result.get_statevector(qc).probabilities_dict().items() if v > sv_p_cutoff}
-            norm = sum(counts.values())
-            counts = {k: v / norm for k, v in counts.items()}
-        else:
-            shots = sum(result.get_counts(qc).values())
-            counts = {k: v / shots for k, v in result.get_counts(qc).items()}
-        self._parsed_counts = self._tiles.parse_counts(counts)
+        qc_list = [self.qc]
+        probabilities_dict = circuit_runner.execute(qc_list)[0]
+        self._pc = self._tiles.parse_counts(probabilities_dict)
 
     def run(self, coord_rules_fun: Callable[
         [tuple, dict[Any, tuple], dict[Any, Any], int, dict[tuple, int]], CorrelationRuleSet],
             coord_path_fun: Callable[[Iterator[tuple]], Iterator[tuple]],
-            backend: Any, coord_fixed: dict[tuple, int] = None,
-            callback_fun: Callable[[Any, int, tuple], None] = None, add_barriers: bool = False, use_sv: bool = False,
-            tp_kwarg_dict: dict[str, Any] = None, run_kwarg_dict: dict[str, Any] = None, sv_p_cutoff: float = 1e-12) -> \
+            circuit_runner: CircuitRunnerInterface,
+            coord_fixed: dict[tuple, int] = None,
+            callback_fun: Callable[[Any, int, tuple], None] = None, add_barriers: bool = False, add_measurement: bool = True) -> \
             dict[str, Tuple[float, dict[tuple, int]]]:
         """
         Generate QWFC circuit and run it on a backend. The results represent a list of possible tile maps based on the correlation rules.
 
         :param coord_rules_fun: Function to generate a CorrelationRuleSet for each coordinate.
         :param coord_path_fun: Function to return an interator over all coordinates.
-        :param backend: Qiskit Backend to run the circuit on.
+        :param circuit_runner: Implementation of CircuitRunnerInterface with an 'execute' method to run the circuits. Returns a list of probability dictionaries.
         :param coord_fixed: Coordinates with tile IDs as constraints.
         :param callback_fun: Callback function for each coordinate iteration.
-        :param add_barriers: If True, add barriers to circuits between coordinate iterations.
-        :param use_sv: If True, presume statevector simulation.
-        :param tp_kwarg_dict: Transpiler keyword arguments.
-        :param run_kwarg_dict: Execution keyword arguments.
-        :param sv_p_cutoff: Cutoff probabilities below this threshold for a statevector simulation (rounding errors).
+        :param add_barriers: If True, add barriers to circuits between coordinate iterations for the created circuit.
+        :param add_measurement: If True, add a final measurement of all qubits for the created circuit.
         :return: parsed counts: dictionary with keys=measured bitstrings, values=(measured probability, mapped coordinates as dict with key=tuple and value=tile ID).
         """
-        self.circuit(coord_rules_fun, coord_path_fun, coord_fixed, callback_fun, add_barriers, use_sv)
-        self.execute(backend, tp_kwarg_dict, run_kwarg_dict, use_sv, sv_p_cutoff)
-        return self.parsed_counts
+        self.circuit(coord_rules_fun, coord_path_fun, coord_fixed, callback_fun, add_barriers, add_measurement)
+        self.parsed_counts(circuit_runner)
+        return self.pc
 
 
 class MapSlidingWindow(MapInterface):
@@ -375,31 +329,32 @@ class MapSlidingWindow(MapInterface):
                 [Iterator[tuple]], Tuple[Iterator[tuple], Callable[[Iterator[tuple]], Iterator[tuple]]]],
             coord_rules_fun: Callable[
                 [tuple, dict[Any, tuple], dict[Any, Any], int, dict[tuple, int]], CorrelationRuleSet],
-            backend: Any, tp_kwarg_dict: dict[str, Any] = None, run_kwarg_dict: dict[str, Any] = None,
-            use_sv: bool = False, segment_callback_fun: Callable[[Any, int, tuple], None] = None,
-            callback_fun: Callable[[Any, int, Map, dict[tuple, int]], None] = None) -> None:
+            circuit_runner: CircuitRunnerInterface,
+            segment_callback_fun: Callable[[Any, int, tuple], None] = None,
+            callback_fun: Callable[[Any, int, Map, dict[tuple, int]], None] = None, add_barriers: bool = False, add_measurement: bool = True) -> None:
         """
         Use a sliding window approach to generate multiple QWFC circuits and run each of them on a backend. Compose these results to obtain a tile map.
 
         :param segment_map_fun: Function to extract a single tile map from the resulting list of tile maps from a QWFC circuit execution.
         :param segment_iter_fun: Function to obtain list of coordinates and (function to generate) iterators over these coordinates for each segment.
         :param coord_rules_fun: Function to generate a CorrelationRuleSet for each coordinate.
-        :param backend: Qiskit Backend to run the circuit on.
-        :param tp_kwarg_dict: Transpiler keyword arguments.
-        :param run_kwarg_dict: Execution keyword arguments.
-        :param use_sv: If True, presume statevector simulation.
+        :param circuit_runner: Implementation of CircuitRunnerInterface with an 'execute' method to run the circuits.
         :param segment_callback_fun: Callback function for each coordinate iteration within the segment evaluation.
         :param callback_fun: Callback function for each segment iteration.
-        :return:
+        :param add_barriers: If True, add barriers to circuits between coordinate iterations for the created circuit.
+        :param add_measurement: If True, add a final measurement of all qubits for the created circuit.
+        :return: None
         """
         self._mapped_coords = {}
         #
         for idx, (coord_list, coord_path_fun) in enumerate(segment_iter_fun(self._coord_list)):
             map_segment = Map(self._n_values, coord_list, self._coord_neighbors_fun)
-            map_segment.run(coord_rules_fun, coord_path_fun, backend, coord_fixed=self._mapped_coords,
+            map_segment.run(coord_rules_fun, coord_path_fun,
+                            circuit_runner=circuit_runner,
+                            coord_fixed = self._mapped_coords,
                             callback_fun=segment_callback_fun,
-                            use_sv=use_sv, tp_kwarg_dict=tp_kwarg_dict, run_kwarg_dict=run_kwarg_dict)
-            segment_mapped_coords = segment_map_fun(map_segment.parsed_counts)
+                            add_barriers=add_barriers, add_measurement=add_measurement)
+            segment_mapped_coords = segment_map_fun(map_segment.pc)
             self._mapped_coords.update(segment_mapped_coords)
             if callback_fun is not None:
                 callback_fun(self, idx, map_segment, segment_mapped_coords)

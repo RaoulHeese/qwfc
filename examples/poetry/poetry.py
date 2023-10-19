@@ -10,6 +10,7 @@ from image_generator import generate_images
 
 sys.path.insert(0, '../../src')
 from qwfc import Map, MapSlidingWindow, CorrelationRuleSet
+from runner import CircuitRunnerIBMQAer
 
 special_chars = ['.', '!', '?']
 
@@ -178,7 +179,7 @@ def process_output(mapped_coords, connectivity, space=' '):
 
 def callback_fun(msw, idx, map_segment, segment_mapped_coords, connectivity, composition_path):
     if composition_path is not None:
-        composition_path[len(composition_path) - 1]['options'] = list(map_segment.parsed_counts.values())
+        composition_path[len(composition_path) - 1]['options'] = list(map_segment.pc.values())
 
 
 def segment_callback_fun(m, idx, coord):
@@ -214,10 +215,7 @@ def run(txt_file_path, txt_file_encoding, skip_chars, maximum_connectivity, n_wo
     connectivity = load_text(txt_file_path, txt_file_encoding, skip_chars, maximum_connectivity, verbose_load_flag)
 
     # input
-    backend = Aer.get_backend('aer_simulator')
-    tp_kwarg_dict = dict()
-    run_kwarg_dict = dict(shots=shots)
-    use_sv = False
+    circuit_runner = CircuitRunnerIBMQAer(backend=Aer.get_backend('qasm_simulator'), run_kwarg_dict=dict(shots=shots))
     n_values = maximum_connectivity
     coord_list = [(n,) for n in range(n_words)]
     composition_path = {} if generate_images_flag else None
@@ -233,7 +231,7 @@ def run(txt_file_path, txt_file_encoding, skip_chars, maximum_connectivity, n_wo
                                                                                                       coord_fixed,
                                                                                                       connectivity,
                                                                                                       word_segment_size),
-            backend, tp_kwarg_dict=tp_kwarg_dict, run_kwarg_dict=run_kwarg_dict, use_sv=use_sv,
+            circuit_runner=circuit_runner,
             segment_callback_fun=segment_callback_fun,
             callback_fun=lambda msw, idx, map_segment, segment_mapped_coords: callback_fun(msw, idx, map_segment,
                                                                                            segment_mapped_coords,
