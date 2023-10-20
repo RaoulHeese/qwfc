@@ -57,10 +57,11 @@ def run_1d(map_x_size, use_sv, shots, show_qc):
         backend = Aer.get_backend('qasm_simulator')
     circuit_runner = CircuitRunnerIBMQAer(backend = backend, run_kwarg_dict = dict(shots=shots))
     coord_list_1d = [(x,) for x in range(map_x_size)]
+    check_feasibility = False
 
     # run
     print(f'checker 1d: run full map generation (circuit_runner={circuit_runner})...')
-    m = Map(n_values, coord_list_1d, coord_neighbors_fun_1d)
+    m = Map(n_values, coord_list_1d, coord_neighbors_fun_1d, check_feasibility)
     m.run(coord_rules_fun_1d, coord_path_fun_1d, circuit_runner, callback_fun=None)
 
     # output
@@ -100,10 +101,11 @@ def run_2d(map_x_size, map_y_size, use_sv, shots, show_qc):
         backend = Aer.get_backend('qasm_simulator')
     circuit_runner = CircuitRunnerIBMQAer(backend=backend, run_kwarg_dict=dict(shots=shots))
     coord_list_2d = [(x, y) for y in range(map_y_size - 1, -1, -1) for x in range(map_x_size)]
+    check_feasibility = False
 
     # run
     print(f'checker 2d: run full map generation (circuit_runner={circuit_runner})...')
-    m = Map(n_values, coord_list_2d, coord_neighbors_fun_2d)
+    m = Map(n_values, coord_list_2d, coord_neighbors_fun_2d, check_feasibility)
     m.run(coord_rules_fun_2d, coord_path_fun_2d, circuit_runner, callback_fun=None)
 
     # output+

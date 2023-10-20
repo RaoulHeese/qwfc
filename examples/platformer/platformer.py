@@ -183,10 +183,11 @@ def run_full(map_x_size, map_y_size, big_flag, use_sv, shots):
     circuit_runner = CircuitRunnerIBMQAer(backend=backend, run_kwarg_dict=dict(shots=shots))
     n_values, coord_rules_fun = generate_coord_rules_fun(big_flag)
     coord_list = [(x, y) for y in range(map_y_size - 1, -1, -1) for x in range(map_x_size)]
+    check_feasibility = False
 
     # run
     print(f'platformer: run full map generation (circuit_runner={circuit_runner})...')
-    m = Map(n_values, coord_list, coord_neighbors_fun)
+    m = Map(n_values, coord_list, coord_neighbors_fun, check_feasibility)
     m.run(coord_rules_fun, segment_coord_path_fun, circuit_runner=circuit_runner, callback_fun=None)
 
     # output
@@ -207,10 +208,11 @@ def run_segmented(map_x_size, map_y_size, segment_x_size, segment_y_size, segmen
     circuit_runner = CircuitRunnerIBMQAer(backend=Aer.get_backend('qasm_simulator'), run_kwarg_dict=dict(shots=shots))
     n_values, coord_rules_fun = generate_coord_rules_fun(big_flag)
     coord_list = [(x, y) for y in range(map_y_size - 1, -1, -1) for x in range(map_x_size)]
+    feasibility = False
 
     # run
     print(f'platformer: run segmented map generation (circuit_runner={circuit_runner})...')
-    msw = MapSlidingWindow(n_values, coord_list, coord_neighbors_fun)
+    msw = MapSlidingWindow(n_values, coord_list, coord_neighbors_fun, feasibility)
     segment_iter_fun = lambda coord_list: segment_iter_fun_wrapper(coord_list, map_x_size, map_y_size, segment_x_size,
                                                                    segment_y_size, segment_x_shift, segment_y_shift)
     total_steps = (((map_x_size - segment_x_size) // segment_x_shift) + 1) * (

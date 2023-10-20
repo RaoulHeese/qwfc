@@ -2,6 +2,7 @@ import os
 import sys
 
 
+
 def run_example(sub_dir, python_file, *args):
     assert os.system(f'cd {sub_dir} && {sys.executable} {python_file} {" ".join([str(arg) for arg in args])}') == 0
 
@@ -18,3 +19,19 @@ run_example('platformer', 'platformer.py', '-x 4 -y 4 --segment-x-size 0')
 run_example('hex', 'hex.py')
 
 run_example('poetry', 'poetry.py')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

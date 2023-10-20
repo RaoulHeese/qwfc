@@ -56,12 +56,15 @@ def coord_rules_fun_generator(adj_order, necessary_rules_dict, correlation_rules
         # finalize rules
         rules_clean = {}
         for rule, d in rules_merged.items():
-            p_dict = {k: abs(v(coord) if callable(v) else float(v)) for k, v in d.items()}
-            norm = sum(p_dict.values())
-            if norm > 0:
-                p_dict = {k: v / norm for k, v in p_dict.items()}
+            if d is not None:
+                p_dict = {k: abs(v(coord) if callable(v) else float(v)) for k, v in d.items()}
+                norm = sum(p_dict.values())
+                if norm > 0:
+                    p_dict = {k: v / norm for k, v in p_dict.items()}
+                else:
+                    p_dict = {k: 1 / n_values for k, v in p_dict.items()}
             else:
-                p_dict = {k: 1 / n_values for k, v in p_dict.items()}
+                p_dict = None
             rules_clean[rule] = p_dict
 
         # traverse finalized rules

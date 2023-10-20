@@ -91,10 +91,11 @@ def run(map_lim, use_sv=True, shots=1000, coord_path_seed=42):
     circuit_runner = CircuitRunnerIBMQAer(backend=backend, run_kwarg_dict = dict(shots=shots))
     coord_list = [(r, s, t) for r in range(-map_lim, map_lim + 1) for s in range(-map_lim, map_lim + 1) for t in
                   range(-map_lim, map_lim + 1) if s + r + t == 0]
+    check_feasibility = False
 
     # run
     print(f'hex: run full map generation (circuit_runner={circuit_runner})...')
-    m = Map(n_values, coord_list, coord_neighbors_fun)
+    m = Map(n_values, coord_list, coord_neighbors_fun, check_feasibility)
     m.run(coord_rules_fun, lambda cl: coord_path_fun(cl, coord_path_seed), circuit_runner=circuit_runner, callback_fun=None)
 
     # output

@@ -219,9 +219,10 @@ def run(txt_file_path, txt_file_encoding, skip_chars, maximum_connectivity, n_wo
     n_values = maximum_connectivity
     coord_list = [(n,) for n in range(n_words)]
     composition_path = {} if generate_images_flag else None
+    check_feasibility = False
 
     # run
-    msw = MapSlidingWindow(n_values, coord_list, lambda coord: coord_neighbors_fun(coord, word_segment_size))
+    msw = MapSlidingWindow(n_values, coord_list, lambda coord: coord_neighbors_fun(coord, word_segment_size), check_feasibility)
     msw.run(lambda parsed_counts: segment_map_fun(parsed_counts, composition_path),
             lambda coord_list: segment_iter_fun(coord_list, word_segment_size),
             lambda coord, visited_coord_adj, coord_adj_offmap, n_values, coord_fixed: coord_rules_fun(coord,

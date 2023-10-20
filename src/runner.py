@@ -7,7 +7,7 @@ from qiskit_ibm_runtime import QiskitRuntimeService, Session, Sampler, Options
 class CircuitRunnerInterface:
     """Controls the circuit execution (on simulator/real device)."""
 
-    def __init__(self) -> None:
+    def __init__(self):
         pass
 
     def __repr__(self):
@@ -32,13 +32,13 @@ class CircuitRunnerInterface:
         """
         if len(qc_list) == 0:
             return []
-        return self._execute(qc_list)
+        return self._execute([qc.copy() for qc in qc_list])
 
 
 class CircuitRunnerIBMQ(CircuitRunnerInterface):
     """Controls the circuit execution for IBMQ."""
 
-    def __init__(self, backend: Any, run_kwarg_dict: dict[str, Any] = None) -> None:
+    def __init__(self, backend: Any, run_kwarg_dict: dict[str, Any] = None):
         """
         :param backend: Qiskit Backend to run the circuits on (used in Session).
         :param run_kwarg_dict: Keyword arguments for the backend execution.
@@ -57,7 +57,7 @@ class CircuitRunnerIBMQRuntime(CircuitRunnerIBMQ):
 
     def __init__(self, backend: Any, run_kwarg_dict: dict[str, Any] = None, runtime_service_kwarg_dict: dict[str, Any] = None,
                                   options_kwarg_dict: dict[str, Any] = None,
-                                  ) -> None:
+                                  ):
         """
         :param backend: Qiskit Backend to run the circuits on (used in Session).
         :param run_kwarg_dict: Sampler.run keyword arguments.
@@ -83,7 +83,6 @@ class CircuitRunnerIBMQRuntime(CircuitRunnerIBMQ):
         """
         if len(qc_list) == 0:
             return []
-
         #
         service = QiskitRuntimeService(**self.runtime_service_kwarg_dict)
         options = Options(**self.options_kwarg_dict)
@@ -99,7 +98,7 @@ class CircuitRunnerIBMQRuntime(CircuitRunnerIBMQ):
 
 class CircuitRunnerIBMQAer(CircuitRunnerIBMQ):
 
-    def __init__(self, backend: Any, run_kwarg_dict: dict[str, Any] = None, tp_kwarg_dict: dict[str, Any] = None, sv_p_cutoff: float = 1e-12) -> None:
+    def __init__(self, backend: Any, run_kwarg_dict: dict[str, Any] = None, tp_kwarg_dict: dict[str, Any] = None, sv_p_cutoff: float = 1e-12):
         """
         :param backend: Qiskit Backend to run the circuits on. Available simulator backends are Aer.get_backend('qasm_simulator') (for circuits with measurements) or Aer.get_backend('statevector_simulator') (for circuits without measurements).
         :param run_kwarg_dict: Execution keyword arguments.
@@ -128,7 +127,8 @@ class CircuitRunnerIBMQAer(CircuitRunnerIBMQ):
         else:
             use_sv = False
         if use_sv:
-            qc_list = [qc.copy().remove_final_measurements() for qc in qc_list]
+            for qc_idx in range(len(qc_list)):
+                qc_list[qc_idx].remove_final_measurements()
         #
         qc_list = [transpile(qc, self.backend, **self.tp_kwarg_dict) for qc in qc_list]
         job = self.backend.run(qc_list, **self.run_kwarg_dict)

@@ -212,10 +212,11 @@ def run(map_x_size, map_y_size, segment_x_size, segment_y_size, segment_x_shift,
     circuit_runner = CircuitRunnerIBMQAer(backend=Aer.get_backend('qasm_simulator'), run_kwarg_dict=dict(shots=shots))
     coord_rules_fun = generate_coord_rules_fun((lambda coords: coords[0] * alpha) if alpha > 0 else 1)
     coord_list = [(x, y) for y in range(map_y_size - 1, -1, -1) for x in range(map_x_size)]
+    check_feasibility = False
 
     # run
     print(f'lines: run segmented map generation (circuit_runner={circuit_runner})...')
-    msw = MapSlidingWindow(n_values, coord_list, coord_neighbors_fun)
+    msw = MapSlidingWindow(n_values, coord_list, coord_neighbors_fun, check_feasibility)
     segment_iter_fun = lambda coord_list: segment_iter_fun_wrapper(coord_list, map_x_size, map_y_size, segment_x_size,
                                                                    segment_y_size, segment_x_shift, segment_y_shift)
     total_steps = (((map_x_size - segment_x_size) // segment_x_shift) + 1) * (
