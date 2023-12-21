@@ -17,8 +17,6 @@ the prepared state is a superposition of all possible tile layouts. A measuremen
 realization. QWFC is not a one-to-one recreation of WFC, but a simplified version that has the goal to achieve a similar
 end result.
 
-This is just a little hobby project and not actively maintained.
-
 ## Algorithm
 
 **Input:**
