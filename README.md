@@ -1,8 +1,8 @@
-# WaveFunctionCollapse with quantum wave function collapse (QWFC)
+#  Quantum Wave Function Collapse for Procedural Content Generation
 
 <p align="center"><img alt="example maps" src="images/examples.png"></p>
 
-QWFC is an experimental implementation of the [WFC](https://github.com/mxgmn/WaveFunctionCollapse) algorithm for quantum
+Quantum Wave Function Collapse (QWFC) is an experimental implementation of the [WaveFunctionCollapse (WFC)](https://github.com/mxgmn/WaveFunctionCollapse) algorithm for quantum
 computers. The original program generates images that appear similar to an input image by randomly drawing image
 elements in an iterative fashion. A detailed explanation of the algorithm can for example be
 found [here](https://robertheaton.com/2018/12/17/wavefunction-collapse-algorithm).
