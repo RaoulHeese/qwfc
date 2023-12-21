@@ -5,7 +5,7 @@ import numpy as np
 from qiskit import QuantumCircuit, ClassicalRegister
 from qiskit.circuit import Clbit
 from qiskit.circuit.library import RYGate
-from runner import CircuitRunnerInterface
+from qwfc.qrunner import CircuitRunnerInterface
 
 
 class AlphabetUser:
@@ -30,11 +30,17 @@ class TileMap:
     def __init__(self):
         self._tiles = {}
         #
-        self._adj = None
-        self._adj_offmap = None
+        self._adj = None  # adj[coord][n_key] = n_coord : if present, alpha_{ d=n_key, i=coord, j=n_coord } = 1
+        self._adj_offmap = None  # adj_offmap[coord][n_key]: if present, beta_{ d=n_key, i=coord } = 1
 
     def __getitem__(self, coord):
         return self._tiles.get(coord)
+
+    def __iter__(self):
+        return iter(self._tiles.items())
+
+    def __len__(self):
+        return len(self._tiles)
 
     def add(self, coord, n_values):
         self._tiles[coord] = Tile(n_values)
@@ -55,11 +61,26 @@ class TileMap:
                 else:
                     self._adj_offmap[coord][n_key] = n_coord
 
-    def get_adj(self, coord):
+    def get_coord_adj(self, coord):
         return self._adj[coord]
 
-    def get_adj_offmap(self, coord):
+    def get_coord_adj_offmap(self, coord):
         return self._adj_offmap[coord]
+
+    def get_alpha(self, n_key, coord, n_coord):
+        # alpha_{ d=n_key, i=coord, j=n_coord }: 1 if i->j are connected vid a, 0 if not
+        coord_adj = self.get_coord_adj(coord)
+        if n_key in coord_adj and coord_adj[n_key] == n_coord:
+            return 1
+        return 0
+
+    def get_beta(self, n_key, coord):
+        # beta_{ d=n_key, i=coord }: 1 if i is connected to the edge via d, 0 if not
+        coord_adj_offmap = self.get_coord_adj_offmap(coord)
+        if n_key in coord_adj_offmap:
+            return 1
+        return 0
+
 
 class TileMapQuantumRepresentation(TileMap):
     def __init__(self):
@@ -156,7 +177,7 @@ class TileMapQuantumRepresentation(TileMap):
         qc = QuantumCircuit(n_encoding+n_feasibility, n_encoding)
         return qc
 
-    def apply_to_circuit(self, qc, coord, ruleset):
+    def apply_to_circuit(self, qc, coord, segment_options):
         qubits = self._encoding_qubits[coord]
         for rule_idx, rule in enumerate(ruleset):
             coord_value_dict = rule.coord_value_dict
@@ -184,7 +205,7 @@ class TileMapQuantumRepresentation(TileMap):
         counts = {k: v for k, v in sorted(counts.items(), key=lambda item: -item[1])}
         for bitstring, p in counts.items():
             bitstring_r = bitstring[::-1].replace(' ', '')
-            bitstring_parsed = {}  # mapped coords
+            bitstring_parsed = {}  # mapped_coords: {coord: value}
             for coord, qubits in self._encoding_qubits.items():
                 value = self._bits2value([bitstring_r[qubit] for qubit in qubits])
                 bitstring_parsed[coord] = value
@@ -196,7 +217,10 @@ class TileMapQuantumRepresentation(TileMap):
             parsed_counts[bitstring] = parsed_result
         return parsed_counts
 
-class CorrelationRule:
+
+
+
+class SegmentOptions:
     def __init__(self, coord_value_dict, p_dict):
         self._coord_value_dict = coord_value_dict  # {coord1: required value coord1, ...}
         self._p_dict = p_dict  # {value1: probability value1, ...} or None. If None, the rule leady to an invalid state.
@@ -214,23 +238,40 @@ class CorrelationRule:
         return self.p_dict is not None
 
 
-class CorrelationRuleSet(AlphabetUser):
+class SegmentOptionsSet(AlphabetUser):
     def __init__(self, n_values):
         super().__init__(n_values)
-        self._rules = [] # list of CorrelationRule
+        self._options = []  # list of SegmentOptions
 
     def __iter__(self):
-        return iter(self._rules)
+        return iter(self._options)
 
     def __len__(self):
-        return len(self._rules)
+        return len(self._options)
 
     def add(self, coord_value_dict, p_dict):
         epsilon = 1e-12
+        assert type(coord_value_dict) is dict
+        assert all([coord_value_dict != rule.coord_value_dict for rule in self._options])
+        assert p_dict is None or type(p_dict) is dict
         assert p_dict is None or abs(sum(p_dict.values()) - 1) < epsilon
         assert p_dict is None or all([value in range(self._n_values) for value in p_dict.keys()])
-        self._rules.append(CorrelationRule(coord_value_dict, p_dict))
+        self._options.append(SegmentOptions(coord_value_dict, p_dict))
 
+    def clear(self):
+        self._options.clear()
+
+    def from_direction_ruleset(self, ruleset, coord, coord_adj, coord_adj_offmap, visited_coord_adj, coord_fixed):
+        self.clear()
+        for values in product(range(self.n_values), repeat=len(visited_coord_adj)):
+            mapped_coords = {}
+            for visited_index, visited_coord in enumerate(visited_coord_adj.values()):
+                mapped_coords[visited_coord] = values[visited_index]
+            mapped_coords_total = {}
+            mapped_coords_total.update(mapped_coords)
+            mapped_coords_total.update(coord_fixed)
+            options = ruleset.provide_options(coord, coord_adj, coord_adj_offmap, mapped_coords_total)
+            self.add(mapped_coords, options)
 
 class MapInterface(AlphabetUser):
     def __init__(self, n_values, coord_list, coord_neighbors_fun, check_feasibility):
@@ -247,7 +288,7 @@ class MapInterface(AlphabetUser):
 class Map(MapInterface):
     """Create circuits for QWFC and run them to obtain tiled maps as samples."""
 
-    def __init__(self, n_values: int, coord_list: Iterator[tuple],
+    def __init__(self, n_values: int, coord_list: list[tuple],
                  coord_neighbors_fun: Callable[[tuple], dict[Any, tuple]],
                  check_feasibility: bool):
         """
@@ -261,6 +302,8 @@ class Map(MapInterface):
         self._tiles.add_list(self._coord_list, self._n_values)
         self._tiles.set_adj(self._coord_neighbors_fun)
         self._tiles.set_qubits()
+        #
+        self._optionset = SegmentOptionsSet(self.n_values)
         #
         self._qc = None
         self._pc = None
@@ -279,7 +322,7 @@ class Map(MapInterface):
     @property
     def pc(self):
         """Return quantum measurement results (after calling self.execute or self.run)."""
-        return self._pc  # bitstring: (probability, mapped_coords) if check_feasibility == False or (probability, mapped_coords, feasibility) if check_feasibility == True
+        return self._pc  # {bitstring: (probability, mapped_coords)} if check_feasibility == False or {bitstring: (probability, mapped_coords, feasibility)} if check_feasibility == True
 
     def circuit(self, coord_rules_fun: Callable[
         [tuple, dict[Any, tuple], dict[Any, Any], int, dict[tuple, int]], CorrelationRuleSet],
@@ -297,21 +340,20 @@ class Map(MapInterface):
         :param add_measurement: If True, add a final measurement of all qubits.
         :return: None
         """
-
-        # TODO
         if coord_fixed is None:
             coord_fixed = {}
         self._pc = None
         self._qc = self._tiles.create_new_circuit(self._check_feasibility)
+
         #
         self._visited_coord_list = []
         for idx, coord in enumerate(coord_path_fun(self._coord_list)):
             assert coord in self._coord_list
-            coord_adj = self._tiles.get_adj(coord)
-            coord_adj_offmap = self._tiles.get_adj_offmap(coord)
-            visited_coord_adj = {n_key: n_coord for n_key, n_coord in coord_adj.items() if
-                                 n_coord in self._visited_coord_list}
-            ruleset = coord_rules_fun(coord, visited_coord_adj, coord_adj_offmap, self._n_values, coord_fixed)
+            coord_adj = self._tiles.get_coord_adj(coord)
+            coord_adj_offmap = self._tiles.get_coord_adj_offmap(coord)
+            visited_coord_adj = {n_key: n_coord for n_key, n_coord in coord_adj.items() if n_coord in self._visited_coord_list}
+            self._optionset.from_direction_ruleset(ruleset, coord, coord_adj, coord_adj_offmap, visited_coord_adj, coord_fixed)
+
             self._tiles.apply_to_circuit(self._qc, coord, ruleset)
             self._visited_coord_list.append(coord)
             if add_barriers:
@@ -361,7 +403,7 @@ class Map(MapInterface):
 class MapSlidingWindow(MapInterface):
     """Sliding window approach to split a big tile map into smaller maps that can be handled with QWFC."""
 
-    def __init__(self, n_values: int, coord_list: Iterator[tuple],
+    def __init__(self, n_values: int, coord_list: list[tuple],
                  coord_neighbors_fun: Callable[[tuple], dict[Any, tuple]], check_feasibility: bool):
         """
         :param n_values: Number of different tile IDs.
