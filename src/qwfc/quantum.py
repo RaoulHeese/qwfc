@@ -1,11 +1,13 @@
-from typing import Any, Callable, Iterator, Tuple
 from itertools import product
+from typing import Any, Callable, Iterator, Tuple
+
 import numpy as np
 from qiskit import QuantumCircuit, ClassicalRegister
 from qiskit.circuit import Clbit
 from qiskit.circuit.library import RYGate
-from qwfc.runner import QuantumRunnerInterface
+
 from qwfc.common import AlphabetUser, TileMap, DirectionRuleSet, WFCInterface
+from qwfc.runner import QuantumRunnerInterface
 
 
 class TileMapQuantumRepresentation(TileMap):
@@ -100,7 +102,7 @@ class TileMapQuantumRepresentation(TileMap):
         self._feasibility_clbits = []
         n_encoding = self._n_encoding_qubits
         n_feasibility = (self._n_feasibility_qubits if self._use_feasibility else 0)
-        qc = QuantumCircuit(n_encoding+n_feasibility, n_encoding)
+        qc = QuantumCircuit(n_encoding + n_feasibility, n_encoding)
         return qc
 
     def apply_to_circuit(self, qc, coord, optionset):
@@ -136,7 +138,7 @@ class TileMapQuantumRepresentation(TileMap):
                 value = self._bits2value([bitstring_r[qubit] for qubit in qubits])
                 bitstring_parsed[coord] = value
             if self._use_feasibility:
-                feasibility = all([self._bits2value(bitstring_r[idx])==0 for idx in self._feasibility_clbits])
+                feasibility = all([self._bits2value(bitstring_r[idx]) == 0 for idx in self._feasibility_clbits])
             else:
                 feasibility = None
             parsed_result = (p, bitstring_parsed, feasibility)
@@ -185,18 +187,21 @@ class SegmentOptionsSet(AlphabetUser):
     def clear(self):
         self._options.clear()
 
-    def from_direction_ruleset(self, ruleset, coord, coord_adj, coord_adj_offmap, visited_coord_adj, coord_fixed, check_feasibility):
+    def from_direction_ruleset(self, ruleset, coord, coord_adj, coord_adj_offmap, visited_coord_adj, coord_fixed,
+                               check_feasibility):
         self.clear()
         for values in product(range(self.n_values), repeat=len(visited_coord_adj)):
             mapped_coords = {}
             for visited_index, visited_coord in enumerate(visited_coord_adj.values()):
                 mapped_coords[visited_coord] = values[visited_index]
             effective_mapped_coords = {}
-            effective_mapped_coords.update(coord_fixed) # choosing coord_fixed first allows that fixed coords can be overwritten
+            effective_mapped_coords.update(
+                coord_fixed)  # choosing coord_fixed first allows that fixed coords can be overwritten
             effective_mapped_coords.update(mapped_coords)
             options = ruleset.provide_options(coord, coord_adj, coord_adj_offmap, effective_mapped_coords)
             if options is not None or check_feasibility:
                 self.add(mapped_coords, options)
+
 
 class QWFC(WFCInterface):
     """Create circuits for QWFC and run them to obtain tiled maps as samples."""
@@ -271,8 +276,10 @@ class QWFC(WFCInterface):
             assert coord in self._coord_list
             coord_adj = self._tiles.get_coord_adj(coord)
             coord_adj_offmap = self._tiles.get_coord_adj_offmap(coord)
-            visited_coord_adj = {n_key: n_coord for n_key, n_coord in coord_adj.items() if n_coord in self._visited_coord_list}
-            self._optionset.from_direction_ruleset(ruleset, coord, coord_adj, coord_adj_offmap, visited_coord_adj, coord_fixed, check_feasibility)
+            visited_coord_adj = {n_key: n_coord for n_key, n_coord in coord_adj.items() if
+                                 n_coord in self._visited_coord_list}
+            self._optionset.from_direction_ruleset(ruleset, coord, coord_adj, coord_adj_offmap, visited_coord_adj,
+                                                   coord_fixed, check_feasibility)
             self._tiles.apply_to_circuit(self._qc, coord, self._optionset)
             self._visited_coord_list.append(coord)
             if add_barriers:
@@ -312,6 +319,7 @@ class QWFC(WFCInterface):
         :param callback_fun: Callback function for each coordinate iteration.
         :return: parsed counts: dictionary with keys=measured bitstrings, values=(measured probability, mapped coordinates as dict with key=tuple and value=tile ID, feasibility).
         """
-        self.circuit(ruleset, coord_path_fun, coord_fixed, callback_fun, quantum_runner.check_feasibility, quantum_runner.add_barriers, quantum_runner.add_measurement)
+        self.circuit(ruleset, coord_path_fun, coord_fixed, callback_fun, quantum_runner.check_feasibility,
+                     quantum_runner.add_barriers, quantum_runner.add_measurement)
         self.parsed_counts(quantum_runner)
         return self.pc

@@ -1,24 +1,26 @@
 import argparse
-import os
-from itertools import product
-import numpy as np
-from datetime import datetime
-import matplotlib.pyplot as plt
-from matplotlib.patches import RegularPolygon
-from qiskit import Aer
-from functools import partial
-from tqdm import tqdm
 import json
-from qwfc.common import DirectionRuleSet
-from qwfc.runner import ClassicalRunnerDefault, QuantumRunnerIBMQAer, HybridRunnerDefault
-from tests.example_utils import run_wfc, configure_quantum_runner, pattern_weight_fun, fig2img
+import os
+from datetime import datetime
+from functools import partial
+from itertools import product
+
+import matplotlib.pyplot as plt
+import numpy as np
+from matplotlib.patches import RegularPolygon
+from tqdm import tqdm
+
 from qwfc._version import __version__
+from qwfc.common import DirectionRuleSet
+from qwfc.runner import ClassicalRunnerDefault, HybridRunnerDefault
+from tests.example_utils import run_wfc, configure_quantum_runner, pattern_weight_fun, fig2img
+
 
 def draw_image(mapped_coords, map_size):
     # options
     R = 1
     alpha = .5
-    lim = map_size*2
+    lim = map_size * 2
     figsize = (10, 10)
     labels = None
     colormap = {0: '#0071BC', 1: '#FFDF42', 2: '#009B55', 3: '#949698'}
@@ -43,6 +45,7 @@ def draw_image(mapped_coords, map_size):
     plt.axis('off')
     return fig2img(fig)
 
+
 def process_result(result, map_size, prefix=''):
     timestamp = str(datetime.now().timestamp())
     prefix = f'{prefix[:64]}{timestamp}-'
@@ -54,7 +57,9 @@ def process_result(result, map_size, prefix=''):
     #
     filename = f'results/{prefix}data.json'
     with open(filename, 'w') as fh:
-        data = dict(pc = {str(key): (float(p), {str(c): int(v) for c,v in mapped_coords.items()}, bool(f) if f is not None else None) for (key, (p, mapped_coords, f)) in pc.items()}, version=__version__)
+        data = dict(pc={
+            str(key): (float(p), {str(c): int(v) for c, v in mapped_coords.items()}, bool(f) if f is not None else None)
+            for (key, (p, mapped_coords, f)) in pc.items()}, version=__version__)
         json.dump(data, fh)
     #
     for idx, (key, (p, mapped_coords, f)) in enumerate(pc.items()):
@@ -63,8 +68,9 @@ def process_result(result, map_size, prefix=''):
         print(f'{key}: p={p}, f={f}, file={filename}')
         draw_image(mapped_coords, map_size).save(filename)
 
-def run(map_size, n_chunks=1, alpha = 5, backend_name=None, channel=None, instance=None, use_sv=False, shots=1, engine='Q', name=''):
 
+def run(map_size, n_chunks=1, alpha=5, backend_name=None, channel=None, instance=None, use_sv=False, shots=1,
+        engine='Q', name=''):
     def coord_neighbors_fun(coord):
         # clockwise cycle starting from top (north)
         r, s, t = coord  # cube coordinates
@@ -78,7 +84,8 @@ def run(map_size, n_chunks=1, alpha = 5, backend_name=None, channel=None, instan
         return coord_dict
 
     def coord_list_fun():
-        return [(r, s, t) for r in range(-map_size, map_size + 1) for s in range(-map_size, map_size + 1) for t in range(-map_size, map_size + 1) if s + r + t == 0]
+        return [(r, s, t) for r in range(-map_size, map_size + 1) for s in range(-map_size, map_size + 1) for t in
+                range(-map_size, map_size + 1) if s + r + t == 0]
 
     def chunk_map_fun(parsed_counts):
         # use most probable
@@ -122,9 +129,9 @@ def run(map_size, n_chunks=1, alpha = 5, backend_name=None, channel=None, instan
         pattern = {n_key: adj_val for n_key, adj_val in zip(n_keys, adj_vals)}
         for v in range(n_values):
             if (v == 0 and 2 not in adj_vals and 3 not in adj_vals) \
-            or (v == 1 and 3 not in adj_vals) \
-            or (v == 2 and 0 not in adj_vals) \
-            or (v == 3 and 0 not in adj_vals and 1 not in adj_vals):
+                    or (v == 1 and 3 not in adj_vals) \
+                    or (v == 2 and 0 not in adj_vals) \
+                    or (v == 3 and 0 not in adj_vals and 1 not in adj_vals):
                 if v == 0:
                     weight = alpha
                 else:
@@ -151,8 +158,9 @@ def run(map_size, n_chunks=1, alpha = 5, backend_name=None, channel=None, instan
         run_kwargs = dict(coord_fixed=None, callback_fun=partial(cwfc_callback_fun, pbar))
     elif engine == 'H':
         # HWFC
-        quantum_runner = configure_quantum_runner(backend_name=backend_name, use_sv=use_sv, channel=channel, instance=instance,
-                                          shots=shots, check_feasibility=False, add_barriers=False)
+        quantum_runner = configure_quantum_runner(backend_name=backend_name, use_sv=use_sv, channel=channel,
+                                                  instance=instance,
+                                                  shots=shots, check_feasibility=False, add_barriers=False)
         runner = HybridRunnerDefault(quantum_runner=quantum_runner)
         total_steps = n_chunks
         pbar = tqdm(total=total_steps, desc='hwfc')
@@ -174,7 +182,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--map_size', type=int, default=2, help='map size')
 parser.add_argument('--n-chunks', type=int, default=4, help='map chunks (only for H)')
 parser.add_argument('--alpha', type=float, default=5, help='blue weight')
-parser.add_argument('--backend-name', type=str, default=None, help='IBMQ backend name, None for local simulator (default: None)')
+parser.add_argument('--backend-name', type=str, default=None,
+                    help='IBMQ backend name, None for local simulator (default: None)')
 parser.add_argument('--channel', type=str, default=None, help='IBMQ runtime service channel (default: None)')
 parser.add_argument('--instance', type=str, default=None, help='IBMQ runtime service instance (default: None)')
 parser.add_argument('--sv', dest='use_sv', action='store_true', help='use statevector simulator')
@@ -188,4 +197,6 @@ if __name__ == '__main__':
     """
     Hexagonal tiles with island-like rules: blue - yellow - green - gray. The probability for blue tiles can be controlled with the parameter alpha.
     """
-    run(map_size=args.map_size, n_chunks=args.n_chunks, alpha = args.alpha, backend_name=args.backend_name, channel=args.channel, instance=args.instance, use_sv=args.use_sv, shots=args.shots, engine=args.engine, name=args.name)
+    run(map_size=args.map_size, n_chunks=args.n_chunks, alpha=args.alpha, backend_name=args.backend_name,
+        channel=args.channel, instance=args.instance, use_sv=args.use_sv, shots=args.shots, engine=args.engine,
+        name=args.name)

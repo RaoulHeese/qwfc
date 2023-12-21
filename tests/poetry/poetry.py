@@ -1,20 +1,23 @@
 import argparse
-import os
-import numpy as np
-from qiskit import Aer
-from datetime import datetime
-from itertools import product
-from functools import partial
-from tqdm import tqdm
-import re
-from qwfc.common import DirectionRuleSet
-from qwfc.runner import ClassicalRunnerDefault, QuantumRunnerIBMQAer, HybridRunnerDefault
 import json
+import os
+import re
+
+from datetime import datetime
+from functools import partial
+from itertools import product
+
+import numpy as np
+from tqdm import tqdm
+
+from qwfc._version import __version__
+from qwfc.common import DirectionRuleSet
+from qwfc.runner import ClassicalRunnerDefault, HybridRunnerDefault
 from tests.example_utils import run_wfc, configure_quantum_runner, pattern_weight_fun
 from tests.poetry.image_generator import generate_images
-from qwfc._version import __version__
 
 special_chars = ['.', '!', '?']
+
 
 def load_text(txt_file_path, txt_file_encoding='utf8', skip_chars=0, maximum_connectivity=None, verbose=False):
     # utility dictionaries
@@ -115,6 +118,7 @@ def parse_word_path(coord_fixed, connectivity):
         word_list.append(word)
     return word_list
 
+
 def process_output(mapped_coords, connectivity, space=' '):
     words = parse_word_path(mapped_coords, connectivity)
     word_list = []
@@ -133,12 +137,14 @@ def process_poem(mapped_coords, connectivity, composition_path):
 
     # generate additional results
     if composition_path is not None:
-        image_list = generate_images(composition_path, path_to_word_list_fun=lambda word_list: process_output(word_list, connectivity))
+        image_list = generate_images(composition_path,
+                                     path_to_word_list_fun=lambda word_list: process_output(word_list, connectivity))
     else:
-       image_list = []
+        image_list = []
     print('composition_path', composition_path)
 
     return poem, image_list
+
 
 def process_result(result, connectivity, composition_path, prefix=''):
     timestamp = str(datetime.now().timestamp())
@@ -162,14 +168,18 @@ def process_result(result, connectivity, composition_path, prefix=''):
     #
     filename = f'results/{prefix}data.json'
     with open(filename, 'w') as fh:
-        data = dict(pc = {str(key): (float(p), {str(c): int(v) for c,v in mapped_coords.items()}, bool(f) if f is not None else None) for (key, (p, mapped_coords, f)) in pc.items()}, version=__version__)
+        data = dict(pc={
+            str(key): (float(p), {str(c): int(v) for c, v in mapped_coords.items()}, bool(f) if f is not None else None)
+            for (key, (p, mapped_coords, f)) in pc.items()}, version=__version__)
         json.dump(data, fh)
 
-def run(txt_file_path, txt_file_encoding, txt_file_skip_chars, maximum_connectivity, n_words, n_chunks=1,
-        verbose_load_flag=False, generate_images_flag=False, backend_name=None, channel=None, instance=None, use_sv=False, shots=1, engine='Q', name=''):
 
+def run(txt_file_path, txt_file_encoding, txt_file_skip_chars, maximum_connectivity, n_words, n_chunks=1,
+        verbose_load_flag=False, generate_images_flag=False, backend_name=None, channel=None, instance=None,
+        use_sv=False, shots=1, engine='Q', name=''):
     # load text
-    connectivity = load_text(txt_file_path, txt_file_encoding, txt_file_skip_chars, maximum_connectivity, verbose_load_flag)
+    connectivity = load_text(txt_file_path, txt_file_encoding, txt_file_skip_chars, maximum_connectivity,
+                             verbose_load_flag)
     print(f'processed text: {len(connectivity)} tokens')
     word_segment_size = 1
 
@@ -178,7 +188,8 @@ def run(txt_file_path, txt_file_encoding, txt_file_skip_chars, maximum_connectiv
 
     def coord_neighbors_fun(word_segment_size, coord):
         n = coord[0]
-        coord_dict = {-(k + 1): (n - (k + 1),) for k in range(word_segment_size)} # -1 : coord, ..., -word_segment_size: coord
+        coord_dict = {-(k + 1): (n - (k + 1),) for k in
+                      range(word_segment_size)}  # -1 : coord, ..., -word_segment_size: coord
         return coord_dict
 
     def coord_list_fun():
@@ -190,7 +201,7 @@ def run(txt_file_path, txt_file_encoding, txt_file_skip_chars, maximum_connectiv
             if feasibility is None or feasibility:
                 if composition_path is not None:
                     composition_path[len(composition_path)] = {}
-                    composition_path[len(composition_path)-1]['chosen'] = coord_map
+                    composition_path[len(composition_path) - 1]['chosen'] = coord_map
                 return coord_map
         return None
 
@@ -202,7 +213,8 @@ def run(txt_file_path, txt_file_encoding, txt_file_skip_chars, maximum_connectiv
         pbar.update(1)
         if composition_path is not None:
             if map_chunk.pc is not None:
-                composition_path[len(composition_path) - 1]['options'] = [(p, mc) for (p, mc, _) in map_chunk.pc.values()]
+                composition_path[len(composition_path) - 1]['options'] = [(p, mc) for (p, mc, _) in
+                                                                          map_chunk.pc.values()]
             else:
                 composition_path[len(composition_path) - 1]['options'] = []
 
@@ -218,7 +230,7 @@ def run(txt_file_path, txt_file_encoding, txt_file_skip_chars, maximum_connectiv
         pbar.update(1)
 
     # values
-    n_values = maximum_connectivity # context-dependent word identifiers
+    n_values = maximum_connectivity  # context-dependent word identifiers
 
     # coordinates
     coord_list = coord_list_fun()
@@ -231,10 +243,11 @@ def run(txt_file_path, txt_file_encoding, txt_file_skip_chars, maximum_connectiv
         connectivity_values = list(connectivity[rule_word].values())
         p_dict = {n: (connectivity_values[n] if len(connectivity[rule_word]) > n else 0.) for n in range(n_values)}
         p_sum = sum(p_dict.values())
-        return p_dict[value]/p_sum
+        return p_dict[value] / p_sum
+
     #
     ruleset = DirectionRuleSet(n_values)
-    n_keys = [-(k+1) for k in range(word_segment_size)]
+    n_keys = [-(k + 1) for k in range(word_segment_size)]
     for adj_vals in product(range(n_values), repeat=len(n_keys)):
         pattern = {n_key: adj_val for n_key, adj_val in zip(n_keys, adj_vals)}
         for value_const in range(n_values):
@@ -265,8 +278,9 @@ def run(txt_file_path, txt_file_encoding, txt_file_skip_chars, maximum_connectiv
         run_kwargs = dict(coord_fixed=None, callback_fun=partial(cwfc_callback_fun, pbar))
     elif engine == 'H':
         # HWFC
-        quantum_runner = configure_quantum_runner(backend_name=backend_name, use_sv=use_sv, channel=channel, instance=instance,
-                                          shots=shots, check_feasibility=False, add_barriers=False)
+        quantum_runner = configure_quantum_runner(backend_name=backend_name, use_sv=use_sv, channel=channel,
+                                                  instance=instance,
+                                                  shots=shots, check_feasibility=False, add_barriers=False)
         runner = HybridRunnerDefault(quantum_runner=quantum_runner)
         total_steps = n_chunks
         pbar = tqdm(total=total_steps, desc='hwfc')
@@ -279,23 +293,30 @@ def run(txt_file_path, txt_file_encoding, txt_file_skip_chars, maximum_connectiv
 
     # run
     pbar.reset()
-    result = run_wfc(runner, n_values, coord_list, partial(coord_neighbors_fun, word_segment_size), ruleset, **run_kwargs)
+    result = run_wfc(runner, n_values, coord_list, partial(coord_neighbors_fun, word_segment_size), ruleset,
+                     **run_kwargs)
     pbar.close()
     process_result(result, connectivity, composition_path, prefix=f'{name}-{engine}-n{n_words}x{word_segment_size}-'),
+
 
 # args
 parser = argparse.ArgumentParser()
 parser.add_argument('--txt-file-path', type=str, default='alice.txt', help='text file')
 parser.add_argument('--txt-file-encoding', type=str, default='utf8', help='text file encoding')
-parser.add_argument('--txt-file-skip-chars', type=int, default=560, help='number of characters to skip at the beginning of the text file')
-parser.add_argument('--maximum-connectivity', type=int, default=8, help='maximum word graph connections, corresponds to number of values')
+parser.add_argument('--txt-file-skip-chars', type=int, default=560,
+                    help='number of characters to skip at the beginning of the text file')
+parser.add_argument('--maximum-connectivity', type=int, default=8,
+                    help='maximum word graph connections, corresponds to number of values')
 parser.add_argument('--n-words', type=int, default=16, help='number of words in generated poem')
 parser.add_argument('--n-chunks', type=int, default=4, help='number of chunks (only for H)')
-parser.add_argument('--verbose-load', dest='verbose_load_flag', action='store_true', help='show text file processing progress')
+parser.add_argument('--verbose-load', dest='verbose_load_flag', action='store_true',
+                    help='show text file processing progress')
 parser.set_defaults(verbose_load_flag=True)
-parser.add_argument('--generate-images', dest='generate_images_flag', action='store_true', help='generate and store images of the probabilistic poem generation progess (only for H, shots > 1)')
+parser.add_argument('--generate-images', dest='generate_images_flag', action='store_true',
+                    help='generate and store images of the probabilistic poem generation progess (only for H, shots > 1)')
 parser.set_defaults(generate_images_flag=True)
-parser.add_argument('--backend-name', type=str, default=None, help='IBMQ backend name, None for local simulator (default: None)')
+parser.add_argument('--backend-name', type=str, default=None,
+                    help='IBMQ backend name, None for local simulator (default: None)')
 parser.add_argument('--channel', type=str, default=None, help='IBMQ runtime service channel (default: None)')
 parser.add_argument('--instance', type=str, default=None, help='IBMQ runtime service instance (default: None)')
 parser.add_argument('--sv', dest='use_sv', action='store_true', help='use statevector simulator')
@@ -310,15 +331,15 @@ if __name__ == '__main__':
     One-dimensional tile arrangement, where each tile represents a word (string). The word sequence is created from left to right according to the reading direction. The probability of each word is only based on the previous word (Markovian) and depends on the ratio of occurence within the provided text.
     """
     run(txt_file_path=args.txt_file_path,
-    txt_file_encoding=args.txt_file_encoding,
-    txt_file_skip_chars=args.txt_file_skip_chars,
-    maximum_connectivity=args.maximum_connectivity,
-    n_words=args.n_words,
-    n_chunks=args.n_chunks,
-    verbose_load_flag=args.verbose_load_flag,
-    generate_images_flag=args.generate_images_flag,
-    backend_name=args.backend_name, channel=args.channel, instance=args.instance,
-    use_sv=args.use_sv,
-    shots=args.shots,
-    engine=args.engine,
-    name=args.name)
+        txt_file_encoding=args.txt_file_encoding,
+        txt_file_skip_chars=args.txt_file_skip_chars,
+        maximum_connectivity=args.maximum_connectivity,
+        n_words=args.n_words,
+        n_chunks=args.n_chunks,
+        verbose_load_flag=args.verbose_load_flag,
+        generate_images_flag=args.generate_images_flag,
+        backend_name=args.backend_name, channel=args.channel, instance=args.instance,
+        use_sv=args.use_sv,
+        shots=args.shots,
+        engine=args.engine,
+        name=args.name)

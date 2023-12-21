@@ -1,7 +1,6 @@
+import numpy as np
 from PIL import Image
 from PIL import ImageDraw
-import numpy as np
-import os
 
 
 def paint_word(word='', p=1, n=None):

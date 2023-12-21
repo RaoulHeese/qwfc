@@ -1,10 +1,11 @@
 import os
+
 from tests.checker.checker import run as checker_run
-from tests.lines.lines import run as lines_run
 from tests.hex.hex import run as hex_run
+from tests.lines.lines import run as lines_run
 from tests.platformer.platformer import run as platformer_run
-from tests.voxel.voxel import run as voxel_run
 from tests.poetry.poetry import run as poetry_run
+from tests.voxel.voxel import run as voxel_run
 
 # checker
 os.chdir('checker')
@@ -38,5 +39,6 @@ os.chdir('..')
 
 # poetry
 os.chdir('poetry')
-poetry_run(txt_file_path='alice.txt', txt_file_encoding='utf8', txt_file_skip_chars=560, maximum_connectivity=8, n_words=8, n_chunks=1, generate_images_flag=True, shots=100, engine='H')
+poetry_run(txt_file_path='alice.txt', txt_file_encoding='utf8', txt_file_skip_chars=560, maximum_connectivity=8,
+           n_words=8, n_chunks=1, generate_images_flag=True, shots=100, engine='H')
 os.chdir('..')

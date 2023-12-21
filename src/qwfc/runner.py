@@ -1,5 +1,6 @@
-from typing import Any
 from abc import abstractmethod
+from typing import Any
+
 import numpy as np
 from qiskit import QuantumCircuit, transpile
 from qiskit_ibm_runtime import QiskitRuntimeService, Session, Sampler, Options
@@ -16,7 +17,7 @@ class RunnerInterface:
 
 class ClassicalRunnerInterface(RunnerInterface):
 
-    def __init__(self, n_samples : int):
+    def __init__(self, n_samples: int):
         super().__init__()
         self._n_samples = n_samples
 
@@ -28,9 +29,10 @@ class ClassicalRunnerInterface(RunnerInterface):
     def choice(self, a: list[int], p: list[float] = None) -> int:
         raise NotImplementedError
 
+
 class ClassicalRunnerDefault(ClassicalRunnerInterface):
 
-    def __init__(self, n_samples : int, numpy_rng : np.random.Generator=None):
+    def __init__(self, n_samples: int, numpy_rng: np.random.Generator = None):
         super().__init__(n_samples)
         if numpy_rng is None:
             numpy_rng = np.random.RandomState()
@@ -47,7 +49,7 @@ class ClassicalRunnerDefault(ClassicalRunnerInterface):
 class QuantumRunnerInterface(RunnerInterface):
     """Controls the circuit execution (on simulator/real device)."""
 
-    def __init__(self, check_feasibility:bool=False, add_barriers: bool=False, add_measurement: bool=True):
+    def __init__(self, check_feasibility: bool = False, add_barriers: bool = False, add_measurement: bool = True):
         """
         :param check_feasibility: If True, store the feasibility of configurations in an additional qubit.
         :param add_barriers: If True, add barriers to circuits (between coordinate iterations).
@@ -95,7 +97,8 @@ class QuantumRunnerInterface(RunnerInterface):
 class QuantumRunnerIBMQ(QuantumRunnerInterface):
     """Controls the circuit execution for IBMQ."""
 
-    def __init__(self, backend: Any, run_kwarg_dict: dict[str, Any] = None, check_feasibility:bool=False, add_barriers: bool=False, add_measurement: bool=True):
+    def __init__(self, backend: Any, run_kwarg_dict: dict[str, Any] = None, check_feasibility: bool = False,
+                 add_barriers: bool = False, add_measurement: bool = True):
         """
         :param backend: Qiskit Backend to run the circuits on (used in Session).
         :param run_kwarg_dict: Keyword arguments for the backend execution.
@@ -115,9 +118,11 @@ class QuantumRunnerIBMQ(QuantumRunnerInterface):
 
 class QuantumRunnerIBMQRuntime(QuantumRunnerIBMQ):
 
-    def __init__(self, backend_name: str, tp_kwarg_dict: dict[str, Any] = None, run_kwarg_dict: dict[str, Any] = None, shots:int = None, runtime_service_kwarg_dict: dict[str, Any] = None,
-                                  options_kwarg_dict: dict[str, Any] = None, check_feasibility:bool=False, add_barriers: bool=False, add_measurement: bool=True,
-                                  ):
+    def __init__(self, backend_name: str, tp_kwarg_dict: dict[str, Any] = None, run_kwarg_dict: dict[str, Any] = None,
+                 shots: int = None, runtime_service_kwarg_dict: dict[str, Any] = None,
+                 options_kwarg_dict: dict[str, Any] = None, check_feasibility: bool = False, add_barriers: bool = False,
+                 add_measurement: bool = True,
+                 ):
         """
         :param backend_name: Qiskit Backend to run the circuits on (used in Session).
         :param tp_kwarg_dict: Transpiler keyword arguments.
@@ -141,7 +146,6 @@ class QuantumRunnerIBMQRuntime(QuantumRunnerIBMQ):
         self.options_kwarg_dict = options_kwarg_dict
         self.run_kwarg_dict = run_kwarg_dict
         self.shots = shots
-
 
     def _execute(self, qc_list: list[QuantumCircuit]) -> list[dict[str, float]]:
         """
@@ -171,7 +175,9 @@ class QuantumRunnerIBMQRuntime(QuantumRunnerIBMQ):
 
 class QuantumRunnerIBMQAer(QuantumRunnerIBMQ):
 
-    def __init__(self, backend: Any, run_kwarg_dict: dict[str, Any] = None, tp_kwarg_dict: dict[str, Any] = None, sv_p_cutoff: float = 1e-12, check_feasibility:bool=False, add_barriers: bool=False, add_measurement: bool=True):
+    def __init__(self, backend: Any, run_kwarg_dict: dict[str, Any] = None, tp_kwarg_dict: dict[str, Any] = None,
+                 sv_p_cutoff: float = 1e-12, check_feasibility: bool = False, add_barriers: bool = False,
+                 add_measurement: bool = True):
         """
         :param backend: Qiskit Backend to run the circuits on. Available simulator backends are Aer.get_backend('qasm_simulator') (for circuits with measurements) or Aer.get_backend('statevector_simulator') (for circuits without measurements).
         :param run_kwarg_dict: Execution keyword arguments.
@@ -186,7 +192,6 @@ class QuantumRunnerIBMQAer(QuantumRunnerIBMQ):
             tp_kwarg_dict = {}
         self.tp_kwarg_dict = tp_kwarg_dict
         self.sv_p_cutoff = sv_p_cutoff
-
 
     def _execute(self, qc_list: list[QuantumCircuit]) -> list[dict[str, float]]:
         """
@@ -213,7 +218,8 @@ class QuantumRunnerIBMQAer(QuantumRunnerIBMQ):
         probabilities_dict_list = []
         for qc in qc_list:
             if use_sv:
-                counts = {k: v for k, v in results.get_statevector(qc).probabilities_dict().items() if v > self.sv_p_cutoff}
+                counts = {k: v for k, v in results.get_statevector(qc).probabilities_dict().items() if
+                          v > self.sv_p_cutoff}
                 norm = sum(counts.values())
                 probabilities_dict = {k: v / norm for k, v in counts.items()}
             else:

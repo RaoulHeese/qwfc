@@ -1,14 +1,17 @@
 import argparse
+import json
 import os
-import matplotlib.pyplot as plt
-import numpy as np
 from datetime import datetime
 from itertools import product
-import json
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+from qwfc._version import __version__
 from qwfc.common import DirectionRuleSet
 from qwfc.runner import ClassicalRunnerDefault, HybridRunnerDefault
 from tests.example_utils import run_wfc, configure_quantum_runner, pattern_weight_fun, compose_image, fig2img
-from qwfc._version import __version__
+
 
 def draw_image(mapped_coords, map_dim, map_size):
     if map_dim <= 2:
@@ -22,7 +25,7 @@ def draw_image(mapped_coords, map_dim, map_size):
         return compose_image(mapped_coords_2d, image_path, sprite_map, sprite_size, background_tile)
 
     elif map_dim == 3:
-        voxelarray = np.zeros((map_size,map_size,map_size))
+        voxelarray = np.zeros((map_size, map_size, map_size))
         facecolors = np.empty((map_size, map_size, map_size), dtype=object)
         for k, v in mapped_coords.items():
             voxelarray[k] = 1
@@ -32,6 +35,7 @@ def draw_image(mapped_coords, map_dim, map_size):
         ax.voxels(voxelarray, facecolors=facecolors, edgecolor='k')
         plt.axis('off')
         return fig2img(fig)
+
 
 def process_result(result, map_dim, map_size, prefix=''):
     timestamp = str(datetime.now().timestamp())
@@ -50,21 +54,23 @@ def process_result(result, map_dim, map_size, prefix=''):
     #
     filename = f'results/{prefix}data.json'
     with open(filename, 'w') as fh:
-        data = dict(pc = {str(key): (float(p), {str(c): int(v) for c,v in mapped_coords.items()}, bool(f) if f is not None else None) for (key, (p, mapped_coords, f)) in pc.items()}, version=__version__)
+        data = dict(pc={
+            str(key): (float(p), {str(c): int(v) for c, v in mapped_coords.items()}, bool(f) if f is not None else None)
+            for (key, (p, mapped_coords, f)) in pc.items()}, version=__version__)
         json.dump(data, fh)
 
 
-def run(map_dim, map_size, n_chunks=1, backend_name=None, channel=None, instance=None, use_sv=False, shots=1, engine='Q', name=''):
-
+def run(map_dim, map_size, n_chunks=1, backend_name=None, channel=None, instance=None, use_sv=False, shots=1,
+        engine='Q', name=''):
     def coord_neighbors_fun(coord):
         coord_dict = {}
         for d in range(map_dim):
             for k in [-1, +1]:
-                coord_dict[f'd{d}{k:+}'] = tuple([coord[d_]+k if d_==d else coord[d_] for d_ in range(map_dim)])
+                coord_dict[f'd{d}{k:+}'] = tuple([coord[d_] + k if d_ == d else coord[d_] for d_ in range(map_dim)])
         return coord_dict
 
     def coord_list_fun():
-        return [coord for coord in product(range(map_size), repeat=map_dim)]#
+        return [coord for coord in product(range(map_size), repeat=map_dim)]  #
 
     def chunk_map_fun(parsed_counts):
         # use most probable
@@ -98,7 +104,8 @@ def run(map_dim, map_size, n_chunks=1, backend_name=None, channel=None, instance
     # setup
     if engine == 'Q':
         # QWFC
-        runner = configure_quantum_runner(backend_name=backend_name, use_sv=use_sv, channel=channel, instance=instance, shots=shots, check_feasibility=False, add_barriers=False)
+        runner = configure_quantum_runner(backend_name=backend_name, use_sv=use_sv, channel=channel, instance=instance,
+                                          shots=shots, check_feasibility=False, add_barriers=False)
         run_kwargs = dict(coord_path_fun=None, coord_fixed=None, callback_fun=None)
     elif engine == 'C':
         # CWFC
@@ -120,12 +127,14 @@ def run(map_dim, map_size, n_chunks=1, backend_name=None, channel=None, instance
     result = run_wfc(runner, n_values, coord_list, coord_neighbors_fun, ruleset, **run_kwargs)
     process_result(result, map_dim, map_size, f'{name}-{engine}-d{map_dim}-s{map_size}-')
 
+
 # args
 parser = argparse.ArgumentParser()
 parser.add_argument('--dim', type=int, default=2, help='map dimension')
 parser.add_argument('--size', type=int, default=4, help='map size')
 parser.add_argument('--n-chunks', type=int, default=2, help='map chunks (only for H)')
-parser.add_argument('--backend-name', type=str, default=None, help='IBMQ backend name, None for local simulator (default: None)')
+parser.add_argument('--backend-name', type=str, default=None,
+                    help='IBMQ backend name, None for local simulator (default: None)')
 parser.add_argument('--channel', type=str, default=None, help='IBMQ runtime service channel (default: None)')
 parser.add_argument('--instance', type=str, default=None, help='IBMQ runtime service instance (default: None)')
 parser.add_argument('--sv', dest='use_sv', action='store_true', help='use statevector simulator')
@@ -139,4 +148,6 @@ if __name__ == '__main__':
     """
     N-dimensional checkerboard with two different kinds of tiles: black tiles and white tiles. Neighboring tiles must be of a different color.
     """
-    run(map_dim=args.dim, map_size=args.size, n_chunks=args.n_chunks, backend_name=args.backend_name, channel=args.channel, instance=args.instance, use_sv=args.use_sv, shots=args.shots, engine=args.engine, name=args.name)
+    run(map_dim=args.dim, map_size=args.size, n_chunks=args.n_chunks, backend_name=args.backend_name,
+        channel=args.channel, instance=args.instance, use_sv=args.use_sv, shots=args.shots, engine=args.engine,
+        name=args.name)

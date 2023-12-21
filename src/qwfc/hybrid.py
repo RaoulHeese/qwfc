@@ -1,7 +1,8 @@
 from typing import Any, Callable, Tuple, Iterator
+
 from qwfc.common import WFCInterface, DirectionRuleSet
-from qwfc.runner import HybridRunnerInterface
 from qwfc.quantum import QWFC
+from qwfc.runner import HybridRunnerInterface
 
 
 class HWFC(WFCInterface):
@@ -54,10 +55,10 @@ class HWFC(WFCInterface):
         #
         for idx, (coord_list, coord_path_fun) in enumerate(chunk_iter_fun(self._coord_list)):
             map_chunk = QWFC(self._n_values, coord_list, self._coord_neighbors_fun)
-            map_chunk.run(ruleset, quantum_runner = hybrid_runner.quantum_runner,
-                            coord_path_fun = coord_path_fun,
-                            coord_fixed = self._mapped_coords,
-                            callback_fun=qwfc_callback_fun)
+            map_chunk.run(ruleset, quantum_runner=hybrid_runner.quantum_runner,
+                          coord_path_fun=coord_path_fun,
+                          coord_fixed=self._mapped_coords,
+                          callback_fun=qwfc_callback_fun)
             chunk_mapped_coords = chunk_map_fun(map_chunk.pc)
             if chunk_mapped_coords is None:
                 self._feasibility = False

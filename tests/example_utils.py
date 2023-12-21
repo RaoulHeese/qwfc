@@ -1,10 +1,13 @@
-from qwfc.runner import QuantumRunnerInterface, ClassicalRunnerInterface, HybridRunnerInterface, QuantumRunnerIBMQAer, QuantumRunnerIBMQRuntime
+import io
+
+from PIL import Image
 from qiskit import Aer
-from qwfc.quantum import QWFC
+
 from qwfc.classical import CWFC
 from qwfc.hybrid import HWFC
-from PIL import Image
-import io
+from qwfc.quantum import QWFC
+from qwfc.runner import QuantumRunnerInterface, ClassicalRunnerInterface, HybridRunnerInterface, QuantumRunnerIBMQAer, \
+    QuantumRunnerIBMQRuntime
 
 
 def run_wfc(runner, n_values, coord_list, coord_neighbors_fun, ruleset, **run_kwargs):
@@ -12,7 +15,8 @@ def run_wfc(runner, n_values, coord_list, coord_neighbors_fun, ruleset, **run_kw
     if isinstance(runner, QuantumRunnerInterface):
         quantum_runner = runner
         qwfc = QWFC(n_values, coord_list, coord_neighbors_fun)
-        qwfc.run(ruleset, quantum_runner, run_kwargs.get('coord_path_fun', None), run_kwargs.get('coord_fixed', None), run_kwargs.get('callback_fun', None))
+        qwfc.run(ruleset, quantum_runner, run_kwargs.get('coord_path_fun', None), run_kwargs.get('coord_fixed', None),
+                 run_kwargs.get('callback_fun', None))
         result.update(dict(pc=qwfc.pc, qc=qwfc.qc))
     elif isinstance(runner, ClassicalRunnerInterface):
         classical_runner = runner
@@ -22,14 +26,16 @@ def run_wfc(runner, n_values, coord_list, coord_neighbors_fun, ruleset, **run_kw
     elif isinstance(runner, HybridRunnerInterface):
         hybrid_runner = runner
         hwfc = HWFC(n_values, coord_list, coord_neighbors_fun)
-        hwfc.run(ruleset, hybrid_runner, run_kwargs.get('chunk_map_fun', None), run_kwargs.get('chunk_iter_fun', None), run_kwargs.get('qwfc_callback_fun', None), run_kwargs.get('hwfc_callback_fun', None))
+        hwfc.run(ruleset, hybrid_runner, run_kwargs.get('chunk_map_fun', None), run_kwargs.get('chunk_iter_fun', None),
+                 run_kwargs.get('qwfc_callback_fun', None), run_kwargs.get('hwfc_callback_fun', None))
         result.update(dict(pc=hwfc.pc))
     else:
         raise NotImplementedError
     return result
 
 
-def configure_quantum_runner(backend_name=None, use_sv=False, channel=None, instance=None, shots=1024, check_feasibility=False, add_barriers=False):
+def configure_quantum_runner(backend_name=None, use_sv=False, channel=None, instance=None, shots=1024,
+                             check_feasibility=False, add_barriers=False):
     if backend_name == None:
         if use_sv:
             backend = Aer.get_backend('statevector_simulator')
@@ -40,18 +46,21 @@ def configure_quantum_runner(backend_name=None, use_sv=False, channel=None, inst
             run_kwarg_dict = dict(shots=shots)
             add_measurement = True
         quantum_runner = QuantumRunnerIBMQAer(backend=backend, run_kwarg_dict=run_kwarg_dict,
-                                      check_feasibility=check_feasibility, add_barriers=add_barriers,
-                                      add_measurement=add_measurement)
+                                              check_feasibility=check_feasibility, add_barriers=add_barriers,
+                                              add_measurement=add_measurement)
     else:
         tp_kwarg_dict = dict(optimization_level=3)
         run_kwarg_dict = dict()
         runtime_service_kwarg_dict = dict(channel=channel, instance=instance)
-        options_kwarg_dict = dict() # resilience_level = 1, optimization_level = 3
+        options_kwarg_dict = dict()  # resilience_level = 1, optimization_level = 3
         add_measurement = True
-        quantum_runner =  QuantumRunnerIBMQRuntime(backend_name=backend_name, tp_kwarg_dict=tp_kwarg_dict, run_kwarg_dict=run_kwarg_dict, shots=shots, runtime_service_kwarg_dict=runtime_service_kwarg_dict,
-                                  options_kwarg_dict=options_kwarg_dict, check_feasibility=check_feasibility, add_barriers=add_barriers, add_measurement=add_measurement)
+        quantum_runner = QuantumRunnerIBMQRuntime(backend_name=backend_name, tp_kwarg_dict=tp_kwarg_dict,
+                                                  run_kwarg_dict=run_kwarg_dict, shots=shots,
+                                                  runtime_service_kwarg_dict=runtime_service_kwarg_dict,
+                                                  options_kwarg_dict=options_kwarg_dict,
+                                                  check_feasibility=check_feasibility, add_barriers=add_barriers,
+                                                  add_measurement=add_measurement)
     return quantum_runner
-
 
 
 def pattern_weight_fun(coord, coord_adj, coord_adj_offmap, mapped_coords, context):
@@ -64,14 +73,14 @@ def pattern_weight_fun(coord, coord_adj, coord_adj_offmap, mapped_coords, contex
     coord_adj_all.update(coord_adj)
     coord_adj_all.update(coord_adj_offmap)
     for n_key, value in context.get('pattern', {}).items():
-        if value is None: # ignore
+        if value is None:  # ignore
             continue
-        if value == 'any': # any (defined or undefined)
+        if value == 'any':  # any (defined or undefined)
             if n_key not in coord_adj_all:
                 return 0
             else:
                 continue
-        elif value == 'none': # nothing or undefined
+        elif value == 'none':  # nothing or undefined
             if n_key not in coord_adj_all or coord_adj_all[n_key] not in mapped_coords.keys():
                 continue
             else:
@@ -85,7 +94,9 @@ def pattern_weight_fun(coord, coord_adj, coord_adj_offmap, mapped_coords, contex
                     return 0
             # exists
             if context.get('must_exist', False):
-                if sum([1 for mapped_coord, mapped_value in mapped_coords.items() if n_key in coord_adj_all and coord_adj_all[n_key] == mapped_coord and mapped_value == value]) == 0:
+                if sum([1 for mapped_coord, mapped_value in mapped_coords.items() if
+                        n_key in coord_adj_all and coord_adj_all[
+                            n_key] == mapped_coord and mapped_value == value]) == 0:
                     return 0
         else:
             raise NotImplementedError
@@ -106,6 +117,7 @@ def pattern_weight_fun(coord, coord_adj, coord_adj_offmap, mapped_coords, contex
             args.append(context)
         weight = weight(*args)
     return weight
+
 
 def compose_image(mapped_coords, image_path, sprite_map, sprite_size, background_tile=None):
     img = Image.open(image_path)
@@ -140,9 +152,9 @@ def compose_image(mapped_coords, image_path, sprite_map, sprite_size, background
     return map_img
 
 
-def fig2img(fig,**kwargs):
+def fig2img(fig, **kwargs):
     buf = io.BytesIO()
-    fig.savefig(buf,**kwargs)
+    fig.savefig(buf, **kwargs)
     buf.seek(0)
     img = Image.open(buf)
     return img

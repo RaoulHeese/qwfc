@@ -1,5 +1,7 @@
 from abc import abstractmethod
+
 import numpy as np
+
 
 class AlphabetUser:
     def __init__(self, n_values):
@@ -78,9 +80,10 @@ class TileMap:
             return 1
         return 0
 
+
 class DirectionRule:
     def __init__(self, value_fun, weight_fun, context):
-        self._value_fun = value_fun # value: (coord) -> int [0, n_values-1]
+        self._value_fun = value_fun  # value: (coord) -> int [0, n_values-1]
         self._weight_fun = weight_fun  # weight: (coord, coord_adj, coord_adj_offmap, mapped_coords, context) -> weight >= 0
         self._context = context
 
@@ -98,6 +101,7 @@ class DirectionRule:
     def evaluate_weight_fun(self, coord, coord_adj, coord_adj_offmap, mapped_coords):
         return self._weight_fun(coord, coord_adj, coord_adj_offmap, mapped_coords, self._context)
 
+
 class DirectionRuleSet(AlphabetUser):
     def __init__(self, n_values):
         super().__init__(n_values)
@@ -110,8 +114,10 @@ class DirectionRuleSet(AlphabetUser):
         return len(self._rules)
 
     def add(self, value_fun_or_const, weight_fun, context=None):
-        if not callable(value_fun_or_const) and type(value_fun_or_const) is int and value_fun_or_const in range(-1, self.n_values):
-            def value_fun(coord): return int(value_fun_or_const)
+        if not callable(value_fun_or_const) and type(value_fun_or_const) is int and value_fun_or_const in range(-1,
+                                                                                                                self.n_values):
+            def value_fun(coord):
+                return int(value_fun_or_const)
         else:
             value_fun = value_fun_or_const
         assert callable(value_fun)
@@ -139,6 +145,7 @@ class PCGInterface(AlphabetUser):
     @abstractmethod
     def run(self, *args, **kwargs):
         raise NotImplementedError
+
 
 class WFCInterface(PCGInterface):
     def __init__(self, n_values, coord_list, coord_neighbors_fun):

@@ -1,11 +1,15 @@
-from typing import Any, Callable, Iterator, Tuple
+from typing import Any, Callable, Tuple
+
+import numpy as np
+
 from qwfc.common import DirectionRuleSet, TileMap, WFCInterface
 from qwfc.runner import ClassicalRunnerInterface
-import numpy as np
+
 
 class TileMapClassicalRepresentation(TileMap):
     def __init__(self):
         super().__init__()
+
 
 class CWFC(WFCInterface):
     def __init__(self, n_values: int, coord_list: list[tuple],
@@ -45,7 +49,7 @@ class CWFC(WFCInterface):
                 if options is None:
                     return None
                 p = np.array(list(options.values()))
-                p[p==0] = 1
+                p[p == 0] = 1
                 entropy = - np.dot(p, np.log(p))
                 coord_candidates[coord] = entropy
         if len(coord_candidates) > 0:
@@ -117,5 +121,5 @@ class CWFC(WFCInterface):
         self._pc = {}  # { key : (p, mc, f) }
         norm = sum([samples[key]['counts'] for key in samples.keys()])
         for key, sample in samples.items():
-            self._pc[key] = (sample['counts']/norm, sample['mapped_coords'], sample['feasibility'])
+            self._pc[key] = (sample['counts'] / norm, sample['mapped_coords'], sample['feasibility'])
         return self.pc
