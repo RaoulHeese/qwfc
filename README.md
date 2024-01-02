@@ -1,5 +1,7 @@
 #  Quantum Wave Function Collapse for Procedural Content Generation
 
+<p align="left"><img src="https://img.shields.io/badge/license-MIT-lightgrey"></p>
+
 <p align="center"><img alt="example maps" src="images/examples.png"></p>
 
 Quantum Wave Function Collapse (QWFC) is an experimental implementation of the [WaveFunctionCollapse (WFC)](https://github.com/mxgmn/WaveFunctionCollapse) algorithm for quantum
