@@ -114,3 +114,19 @@ it is the duchess and then the gryphon replied very soon as it was that you?_
 In addition, the generation process can be visualized in form of images that can be combined to an animation:
 
 <p align="center"><img alt="poem generation" src="images/poem.gif"></p>
+
+This animation shows different overlapping options (with an alpha channel corresponding to their probability), that become fixed once a "collapse" occurs.
+
+## Literature
+
+See [Quantum Wave Function Collapse for Procedural Content Generation](https://arxiv.org/abs/2312.13853).
+
+    @misc{heese2023quantum,
+      title={Quantum Wave Function Collapse for Procedural Content Generation}, 
+      author={Raoul Heese},
+      year={2023},
+      eprint={2312.13853},
+      archivePrefix={arXiv},
+      primaryClass={quant-ph}
+    }
+    
